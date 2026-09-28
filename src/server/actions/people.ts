@@ -148,3 +148,33 @@ export async function saveVendorAction(id: string, input: z.input<typeof vendorS
     revalidatePath("/vendors");
   });
 }
+
+// ---- App users (customers) ---------------------------------------------------
+
+/**
+ * Blocks or unblocks a customer. A blocked customer can't sign in to the app,
+ * and any token they hold stops working on the next request.
+ */
+export async function setCustomerActiveAction(id: string, isActive: boolean) {
+  return run(async () => {
+    const session = await requireCapability("customers.manage");
+    const t = await getTranslations("errors");
+    // Admins: customers of their laundry. Super admin: any app user.
+    const customer = await db.mobileUser.findFirst({
+      where: session.vendorId
+        ? { id, role: "customer", orders: { some: { vendorId: session.vendorId } } }
+        : { id },
+    });
+    if (!customer) throw new ActionError(t("forbidden"));
+    await db.mobileUser.update({ where: { id }, data: { isActive } });
+    await audit(db, {
+      actorId: session.userId,
+      vendorId: session.vendorId,
+      action: isActive ? "customer.unblock" : "customer.block",
+      entity: "MobileUser",
+      entityId: id,
+    });
+    revalidatePath("/users");
+    revalidatePath(`/users/${id}`);
+  });
+}

@@ -33,7 +33,7 @@ export interface TicketView {
   vendorName: { en: string; ar: string };
 }
 
-const ticketInclude = {
+export const ticketInclude = {
   tier: { select: { nameEn: true, nameAr: true, isVip: true, surchargeType: true, surchargeValue: true } },
   events: { orderBy: { at: "desc" }, take: 1, select: { at: true } },
   pickupDriver: { select: { fullName: true, phone: true } },
@@ -55,7 +55,7 @@ export function invoiceTotal(inv: NonNullable<TicketRow["invoice"]>): number {
   return Math.round((base.subtotal + Number(inv.vipSurcharge) + Number(inv.codFee)) * 100) / 100;
 }
 
-function toTicket(o: TicketRow): TicketView {
+export function toTicket(o: TicketRow): TicketView {
   const address = o.addressSnapshot as { area?: string } | null;
   return {
     id: o.id,

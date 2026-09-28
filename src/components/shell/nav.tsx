@@ -12,6 +12,7 @@ import {
   ScrollText,
   Shirt,
   Truck,
+  Smartphone,
   UsersRound,
   type LucideIcon,
 } from "lucide-react";
@@ -25,6 +26,7 @@ const ICONS: Record<NavIcon, LucideIcon> = {
   catalogue: Shirt,
   drivers: Truck,
   staff: UsersRound,
+  users: Smartphone,
   reports: FileBarChart2,
   vendors: Building2,
   audit: ScrollText,

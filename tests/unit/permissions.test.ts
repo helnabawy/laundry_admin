@@ -9,6 +9,12 @@ describe("permissions", () => {
     expect(can("ADMIN", "audit.view")).toBe(false);
   });
 
+  it("app users are managed by admins and the super admin, not operators", () => {
+    expect(can("SUPER_ADMIN", "customers.manage")).toBe(true);
+    expect(can("ADMIN", "customers.manage")).toBe(true);
+    expect(can("USER", "customers.manage")).toBe(false);
+  });
+
   it("operators work orders but can't cancel or manage", () => {
     expect(can("USER", "orders.operate")).toBe(true);
     expect(can("USER", "orders.cancel")).toBe(false);

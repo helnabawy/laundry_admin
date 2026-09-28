@@ -5,6 +5,7 @@ export type NavIcon =
   | "orders"
   | "catalogue"
   | "drivers"
+  | "users"
   | "staff"
   | "reports"
   | "vendors"
@@ -33,6 +34,7 @@ export const NAV_SECTIONS: { label: string; items: NavItem[] }[] = [
     items: [
       { href: "/catalogue", label: "catalogue", icon: "catalogue", capability: "catalogue.manage" },
       { href: "/drivers", label: "drivers", icon: "drivers", capability: "drivers.manage" },
+      { href: "/users", label: "users", icon: "users", capability: "customers.manage" },
     ],
   },
   {

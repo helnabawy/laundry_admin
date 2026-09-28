@@ -62,3 +62,53 @@ test("Arabic, right to left, in dark mode", async ({ page }) => {
   }
   await expect(page.getByRole("heading", { name: "الطلبات" })).toBeVisible();
 });
+
+test("an admin blocks an app user, who then can't sign in; unblocking restores it", async ({ page, request }) => {
+  const phone = "+971501234567";
+  await staffLogin(page, "admin@laundry.local");
+  const nav = page.getByRole("navigation", { name: "Main navigation" }).first();
+  await nav.getByRole("link", { name: "Users" }).click();
+  await expect(page.getByRole("heading", { name: "Users" })).toBeVisible();
+
+  await page.getByPlaceholder("Name or mobile number").fill("501234567");
+  await page.getByRole("button", { name: "Apply" }).click();
+  await page.getByRole("link", { name: "خالد المنصوري" }).click();
+  await expect(page.getByText("Recent orders")).toBeVisible();
+
+  await page.getByRole("button", { name: "Block user" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Block user" }).click();
+  await expect(page.getByText("This user is blocked.", { exact: false })).toBeVisible();
+
+  await request.post("/api/auth/request-otp", { data: { phone } });
+  const refused = await request.post("/api/auth/verify-otp", { data: { phone, code: "1234" } });
+  expect(refused.status()).toBe(403);
+  // A blocked account doesn't count as registered.
+  expect(await (await request.post("/api/auth/lookup", { data: { phone } })).json()).toEqual({ registered: false });
+
+  await page.getByRole("button", { name: "Unblock" }).click();
+  await expect(page.getByText("This user is blocked.", { exact: false })).toHaveCount(0);
+  expect(await (await request.post("/api/auth/lookup", { data: { phone } })).json()).toEqual({ registered: true });
+  await request.post("/api/auth/request-otp", { data: { phone } });
+  expect((await request.post("/api/auth/verify-otp", { data: { phone, code: "1234" } })).ok()).toBe(true);
+});
+
+test("operators don't see app users", async ({ page }) => {
+  await staffLogin(page, "operator@laundry.local");
+  const nav = page.getByRole("navigation", { name: "Main navigation" }).first();
+  await expect(nav.getByRole("link", { name: "Users" })).toHaveCount(0);
+  await page.goto("/users");
+  await expect(page).toHaveURL(/\/dashboard/);
+});
+
+test("the super admin sees every app user: customers and drivers", async ({ page }) => {
+  await staffLogin(page, "super@laundry.local");
+  await page.goto("/users");
+  await expect(page.getByRole("columnheader", { name: "Role" })).toBeVisible();
+  await expect(page.getByRole("cell", { name: "Driver" }).first()).toBeVisible();
+  await expect(page.getByRole("cell", { name: "Customer" }).first()).toBeVisible();
+
+  await page.goto("/users?role=driver");
+  await expect(page.getByRole("cell", { name: "Customer" })).toHaveCount(0);
+  await page.getByRole("link", { name: "أحمد علي" }).click();
+  await expect(page.getByText("Recent pickups and deliveries")).toBeVisible();
+});

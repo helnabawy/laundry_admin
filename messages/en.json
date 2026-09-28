@@ -66,7 +66,8 @@
     "themeSystem": "Match device",
     "skipToContent": "Skip to content",
     "laundry": "Laundry",
-    "allLaundries": "All laundries"
+    "allLaundries": "All laundries",
+    "users": "Users"
   },
   "auth": {
     "title": "Sign in",
@@ -625,5 +626,54 @@
     "newPasswordHint": "At least 10 characters.",
     "passwordChanged": "Password changed",
     "wrongPassword": "Your current password isn't right."
+  },
+  "users": {
+    "title": "Users",
+    "description": "Everyone who uses the mobile app, customers and drivers, in every laundry. They sign in with their mobile number.",
+    "descriptionLaundry": "Customers who have ordered from your laundry. They sign in to the mobile app with their mobile number.",
+    "searchPlaceholder": "Name or mobile number",
+    "status": "Status",
+    "allStatuses": "All users",
+    "active": "Active",
+    "blockedStatus": "Blocked",
+    "name": "Name",
+    "phone": "Mobile number",
+    "orders": "Orders",
+    "paid": "Paid",
+    "lastOrder": "Last order",
+    "joined": "Joined",
+    "noName": "No name yet",
+    "empty": "No users yet",
+    "emptyBody": "Users appear here after they sign in to the app and order.",
+    "emptyFiltered": "Try a different name or number, or clear the filter.",
+    "backToList": "Back to users",
+    "summary": "Account",
+    "recentOrders": "Recent orders",
+    "noOrders": "No orders yet",
+    "addresses": "Addresses",
+    "noAddresses": "No saved addresses",
+    "addressKind": {
+      "home": "Home",
+      "work": "Work",
+      "other": "Other"
+    },
+    "block": "Block user",
+    "unblock": "Unblock",
+    "blockTitle": "Block {name}?",
+    "blockBody": "They are signed out and can't sign in to the app or place orders until you unblock them. Their order history stays.",
+    "blockConfirm": "Block user",
+    "blocked": "{name} is blocked",
+    "unblocked": "{name} can sign in again",
+    "blockedNote": "This user is blocked. They can't sign in to the app or place orders.",
+    "role": "Role",
+    "allRoles": "All roles",
+    "roles": {
+      "customer": "Customer",
+      "driver": "Driver"
+    },
+    "laundry": "Laundry",
+    "allLaundries": "Any laundry",
+    "stops": "Stops",
+    "recentStops": "Recent pickups and deliveries"
   }
 }
