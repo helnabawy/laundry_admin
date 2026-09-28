@@ -1,0 +1,511 @@
+// Laundry platform — shared by the Admin Portal and the mobile app's REST API.
+//
+// Multi-vendor rule: every business row carries `vendorId`. Phase 1 runs a
+// single vendor (one laundry); adding more needs no schema change.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---- Tenancy --------------------------------------------------------------
+
+model Vendor {
+  id            String   @id @default(cuid())
+  slug          String   @unique
+  nameEn        String
+  nameAr        String
+  phone         String?
+  logoUrl       String?
+  isActive      Boolean  @default(true)
+  /// Prefix for customer-facing invoice numbers, e.g. "INV" → "INV-1042".
+  invoicePrefix String   @default("INV")
+  /// Flat handling fee added when the customer pays cash on delivery (AED).
+  codFee        Decimal  @default(5) @db.Decimal(10, 2)
+  /// Last order number issued; the next order takes `orderSeq + 1`.
+  orderSeq      Int      @default(1041)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  staff         StaffUser[]
+  drivers       MobileUser[]
+  categories    ServiceCategory[]
+  products      Product[]
+  tiers         ServiceTier[]
+  slotWindows   SlotWindow[]
+  orders        Order[]
+  notifications Notification[]
+}
+
+// ---- People ---------------------------------------------------------------
+
+enum StaffRole {
+  SUPER_ADMIN
+  ADMIN
+  USER
+}
+
+/// A portal account. SUPER_ADMIN is platform-wide (vendorId = null);
+/// ADMIN and USER belong to one vendor.
+model StaffUser {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  name         String
+  role         StaffRole
+  vendorId     String?
+  vendor       Vendor?   @relation(fields: [vendorId], references: [id])
+  locale       String    @default("en")
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  notificationReads StaffNotificationRead[]
+  auditLogs         AuditLog[]
+}
+
+enum MobileRole {
+  customer
+  driver
+}
+
+/// A mobile-app account (phone + OTP). Customers are platform-wide; drivers
+/// work for one vendor.
+model MobileUser {
+  id          String     @id @default(cuid())
+  phone       String     @unique
+  fullName    String?
+  role        MobileRole @default(customer)
+  vendorId    String?
+  vendor      Vendor?    @relation(fields: [vendorId], references: [id])
+  isAvailable Boolean    @default(true)
+  isActive    Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  addresses       Address[]
+  orders          Order[]        @relation("CustomerOrders")
+  pickupTasks     Order[]        @relation("PickupDriver")
+  deliveryTasks   Order[]        @relation("DeliveryDriver")
+  notifications   Notification[]
+  supportRequests SupportRequest[]
+}
+
+model OtpChallenge {
+  id        String   @id @default(cuid())
+  phone     String
+  codeHash  String
+  attempts  Int      @default(0)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([phone, createdAt])
+}
+
+enum AddressKind {
+  home
+  work
+  other
+}
+
+model Address {
+  id             String      @id @default(cuid())
+  userId         String
+  user           MobileUser  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind           AddressKind @default(home)
+  label          String?
+  city           String
+  area           String
+  building       String
+  floor          String?
+  apartment      String
+  alternatePhone String?
+  latitude       Float?
+  longitude      Float?
+  deletedAt      DateTime?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+}
+
+// ---- Catalogue ------------------------------------------------------------
+
+/// A kind of thing the laundry cleans (clothes, carpets, curtains…).
+model ServiceCategory {
+  id            String   @id @default(cuid())
+  vendorId      String
+  vendor        Vendor   @relation(fields: [vendorId], references: [id])
+  nameEn        String
+  nameAr        String
+  descriptionEn String   @default("")
+  descriptionAr String   @default("")
+  /// Key into the portal's curated icon set (see src/lib/category-icons.ts).
+  iconKey       String   @default("shirt")
+  imageUrl      String?
+  sortOrder     Int      @default(0)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  subServices SubService[]
+  products    Product[]
+  orderLines  OrderLine[]
+
+  @@index([vendorId, sortOrder])
+}
+
+/// A way of treating a category (wash only, wash & iron…), wizard path.
+model SubService {
+  id            String          @id @default(cuid())
+  categoryId    String
+  category      ServiceCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  nameEn        String
+  nameAr        String
+  descriptionEn String          @default("")
+  descriptionAr String          @default("")
+  sortOrder     Int             @default(0)
+  isActive      Boolean         @default(true)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  orderLines OrderLine[]
+
+  @@index([categoryId, sortOrder])
+}
+
+/// A priced item in the shop catalogue ("T-shirt — AED 2").
+model Product {
+  id            String          @id @default(cuid())
+  vendorId      String
+  vendor        Vendor          @relation(fields: [vendorId], references: [id])
+  categoryId    String
+  category      ServiceCategory @relation(fields: [categoryId], references: [id])
+  nameEn        String
+  nameAr        String
+  descriptionEn String          @default("")
+  descriptionAr String          @default("")
+  unitPrice     Decimal         @db.Decimal(10, 2)
+  imageUrl      String?
+  sortOrder     Int             @default(0)
+  isActive      Boolean         @default(true)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  invoiceItems InvoiceItem[]
+
+  @@index([vendorId, categoryId, sortOrder])
+}
+
+enum SurchargeType {
+  none
+  flat
+  percentage
+}
+
+/// Standard / VIP. Differ by turnaround and, in the shop flow, surcharge.
+model ServiceTier {
+  id             String        @id @default(cuid())
+  vendorId       String
+  vendor         Vendor        @relation(fields: [vendorId], references: [id])
+  nameEn         String
+  nameAr         String
+  deliveryHours  Int
+  isVip          Boolean       @default(false)
+  surchargeType  SurchargeType @default(none)
+  surchargeValue Decimal       @default(0) @db.Decimal(10, 2)
+  /// [{ "en": "...", "ar": "..." }]
+  perks          Json          @default("[]")
+  sortOrder      Int           @default(0)
+  isActive       Boolean       @default(true)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  orders Order[]
+}
+
+/// A recurring daily pickup/delivery window. Concrete slots are generated per
+/// date with id `YYYY-MM-DD-<windowId>`.
+model SlotWindow {
+  id          String   @id @default(cuid())
+  vendorId    String
+  vendor      Vendor   @relation(fields: [vendorId], references: [id])
+  /// Minutes after local midnight (Asia/Dubai).
+  startMinute Int
+  endMinute   Int
+  /// Orders per window per day, counting pickups and deliveries separately.
+  capacity    Int      @default(10)
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ---- Orders ---------------------------------------------------------------
+
+enum OrderKind {
+  SHOP
+  WIZARD
+}
+
+/// Spelled exactly like the app's `OrderStatus` enum names.
+enum OrderStatus {
+  pending
+  driverAssigned
+  pickedUp
+  atFacility
+  awaitingPayment
+  processing
+  outForDelivery
+  delivered
+  pickupFailed
+  deliveryFailed
+  cancelled
+}
+
+enum PaymentMethod {
+  card
+  cashOnDelivery
+}
+
+model Order {
+  id                String      @id @default(cuid())
+  vendorId          String
+  vendor            Vendor      @relation(fields: [vendorId], references: [id])
+  number            Int
+  kind              OrderKind
+  status            OrderStatus @default(pending)
+  customerId        String
+  customer          MobileUser  @relation("CustomerOrders", fields: [customerId], references: [id])
+  /// Snapshot at booking time, so later edits don't rewrite history.
+  customerName      String
+  customerPhone     String
+  addressSnapshot   Json
+  tierId            String
+  tier              ServiceTier @relation(fields: [tierId], references: [id])
+  pickupSlotId      String
+  pickupStart       DateTime
+  pickupEnd         DateTime
+  deliverySlotId    String
+  deliveryStart     DateTime
+  deliveryEnd       DateTime
+  pickupDriverId    String?
+  pickupDriver      MobileUser? @relation("PickupDriver", fields: [pickupDriverId], references: [id])
+  deliveryDriverId  String?
+  deliveryDriver    MobileUser? @relation("DeliveryDriver", fields: [deliveryDriverId], references: [id])
+  cancelReason      String?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  lines         OrderLine[]
+  events        OrderStatusEvent[]
+  invoice       Invoice?
+  failures      TaskFailure[]
+  rating        OrderRating?
+  notifications Notification[]
+  supportRequests SupportRequest[]
+
+  @@unique([vendorId, number])
+  @@index([vendorId, status])
+  @@index([vendorId, createdAt])
+  @@index([customerId, createdAt])
+  @@index([pickupDriverId, status])
+  @@index([deliveryDriverId, status])
+}
+
+/// Wizard path: what the customer asked to be cleaned (no price).
+model OrderLine {
+  id           String          @id @default(cuid())
+  orderId      String
+  order        Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  categoryId   String
+  category     ServiceCategory @relation(fields: [categoryId], references: [id])
+  subServiceId String
+  subService   SubService      @relation(fields: [subServiceId], references: [id])
+}
+
+enum ActorType {
+  staff
+  driver
+  customer
+  system
+}
+
+/// The order's timeline. One row per status the order entered.
+model OrderStatusEvent {
+  id        String      @id @default(cuid())
+  orderId   String
+  order     Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status    OrderStatus
+  at        DateTime    @default(now())
+  actorType ActorType
+  actorId   String?
+  note      String?
+
+  @@index([orderId, at])
+}
+
+model Invoice {
+  id                     String         @id @default(cuid())
+  orderId                String         @unique
+  order                  Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  /// Customer-facing number, e.g. "INV-1042". Sent to the app as `id`.
+  number                 String         @unique
+  paymentMethod          PaymentMethod?
+  paid                   Boolean        @default(false)
+  paidAt                 DateTime?
+  vipSurcharge           Decimal        @default(0) @db.Decimal(10, 2)
+  codFee                 Decimal        @default(0) @db.Decimal(10, 2)
+  note                   String?
+  conditionsAcknowledged Boolean        @default(false)
+  issuedById             String?
+  createdAt              DateTime       @default(now())
+  updatedAt              DateTime       @updatedAt
+
+  items      InvoiceItem[]
+  conditions ItemCondition[]
+}
+
+model InvoiceItem {
+  id         String   @id @default(cuid())
+  invoiceId  String
+  invoice    Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  /// Snapshot of the product name in both languages.
+  nameEn     String
+  nameAr     String
+  quantity   Int
+  unitPrice  Decimal  @db.Decimal(10, 2)
+  productId  String?
+  product    Product? @relation(fields: [productId], references: [id])
+  categoryId String?
+  sortOrder  Int      @default(0)
+}
+
+enum ConditionKind {
+  stain
+  damage
+}
+
+/// Condition report: stains or damage found while sorting (wizard path).
+model ItemCondition {
+  id        String        @id @default(cuid())
+  invoiceId String
+  invoice   Invoice       @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  itemName  String
+  kind      ConditionKind
+  note      String?
+  photoUrl  String?
+}
+
+enum TaskStage {
+  pickup
+  delivery
+}
+
+enum TaskFailureReason {
+  customerAbsent
+  wrongAddress
+  customerRescheduled
+  other
+}
+
+model TaskFailure {
+  id        String            @id @default(cuid())
+  orderId   String
+  order     Order             @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  stage     TaskStage
+  reason    TaskFailureReason
+  note      String?
+  photoUrl  String?
+  driverId  String?
+  createdAt DateTime          @default(now())
+}
+
+model OrderRating {
+  id      String   @id @default(cuid())
+  orderId String   @unique
+  order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  stars   Int
+  comment String?
+  ratedAt DateTime @default(now())
+}
+
+model ProofOfDelivery {
+  id        String   @id @default(cuid())
+  orderId   String   @unique
+  photoUrl  String
+  createdAt DateTime @default(now())
+}
+
+// ---- Notifications --------------------------------------------------------
+
+enum NotificationAudience {
+  staff
+  mobile
+}
+
+/// Mobile notifications have a recipient; staff notifications are broadcast
+/// to everyone in the vendor (plus super admins), with per-user read state.
+model Notification {
+  id           String               @id @default(cuid())
+  audience     NotificationAudience
+  vendorId     String?
+  vendor       Vendor?              @relation(fields: [vendorId], references: [id])
+  mobileUserId String?
+  mobileUser   MobileUser?          @relation(fields: [mobileUserId], references: [id], onDelete: Cascade)
+  /// Mobile: the app's NotificationKind. Staff: see src/domain/notifications.ts.
+  kind         String
+  orderId      String?
+  order        Order?               @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderNumber  Int?
+  readAt       DateTime?
+  createdAt    DateTime             @default(now())
+
+  staffReads StaffNotificationRead[]
+
+  @@index([audience, vendorId, createdAt])
+  @@index([mobileUserId, createdAt])
+}
+
+model StaffNotificationRead {
+  notificationId String
+  notification   Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  staffUserId    String
+  staffUser      StaffUser    @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+  readAt         DateTime     @default(now())
+
+  @@id([notificationId, staffUserId])
+}
+
+// ---- Support & audit ------------------------------------------------------
+
+model SupportRequest {
+  id         String     @id @default(cuid())
+  reference  String     @unique
+  userId     String
+  user       MobileUser @relation(fields: [userId], references: [id])
+  orderId    String?
+  order      Order?     @relation(fields: [orderId], references: [id])
+  topic      String
+  transcript Json
+  resolvedAt DateTime?
+  createdAt  DateTime   @default(now())
+}
+
+model AuditLog {
+  id         String     @id @default(cuid())
+  actorId    String?
+  actor      StaffUser? @relation(fields: [actorId], references: [id])
+  vendorId   String?
+  action     String
+  entity     String
+  entityId   String?
+  data       Json?
+  createdAt  DateTime   @default(now())
+
+  @@index([vendorId, createdAt])
+  @@index([entity, entityId])
+}

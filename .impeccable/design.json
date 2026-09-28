@@ -1,0 +1,961 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-28T13:32:39+00:00",
+  "title": "Design System: Laundry Admin",
+  "extensions": {
+    "colorMeta": {
+      "counter": {
+        "role": "neutral",
+        "displayName": "Counter Grey",
+        "purpose": "Page ground; notch colour cut into tickets.",
+        "canonical": "#e8eaed",
+        "dark": "#111214",
+        "tonalRamp": [
+          "#0a0b0d",
+          "#242527",
+          "#404244",
+          "#606164",
+          "#818285",
+          "#a3a5a8",
+          "#c7c9cc",
+          "#edeff2"
+        ]
+      },
+      "counter-deep": {
+        "role": "neutral",
+        "displayName": "Counter Deep",
+        "purpose": "Segmented-control troughs, ghost hover, unchecked switch.",
+        "canonical": "#dde0e4",
+        "dark": "#0b0c0d",
+        "tonalRamp": [
+          "#090b0e",
+          "#232528",
+          "#404245",
+          "#5f6165",
+          "#808286",
+          "#a2a5a9",
+          "#c6c9cd",
+          "#eceff3"
+        ]
+      },
+      "card": {
+        "role": "neutral",
+        "displayName": "Card Stock",
+        "purpose": "Tickets, sheets, inputs, active nav item.",
+        "canonical": "#ffffff",
+        "dark": "#1b1c20",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      },
+      "card-recessed": {
+        "role": "neutral",
+        "displayName": "Recessed Card",
+        "purpose": "Wells inside a card.",
+        "canonical": "#f5f5f3",
+        "dark": "#232429",
+        "tonalRamp": [
+          "#0b0b0a",
+          "#252524",
+          "#424240",
+          "#616160",
+          "#828281",
+          "#a5a5a3",
+          "#c9c9c7",
+          "#eeeeec"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "purpose": "Primary text.",
+        "canonical": "#17181b",
+        "dark": "#ececea",
+        "tonalRamp": [
+          "#0a0b0e",
+          "#242528",
+          "#414245",
+          "#606165",
+          "#818286",
+          "#a3a5a9",
+          "#c7c9cd",
+          "#edeef3"
+        ]
+      },
+      "ink-2": {
+        "role": "neutral",
+        "displayName": "Ink 2",
+        "purpose": "Secondary text and labels.",
+        "canonical": "#4b4d54",
+        "dark": "#b6b7bc",
+        "tonalRamp": [
+          "#090b10",
+          "#23252b",
+          "#404248",
+          "#5f6168",
+          "#80828a",
+          "#a2a5ad",
+          "#c6c9d1",
+          "#eceef7"
+        ]
+      },
+      "ink-3": {
+        "role": "neutral",
+        "displayName": "Ink 3",
+        "purpose": "Tertiary metadata and placeholders.",
+        "canonical": "#62646b",
+        "dark": "#9a9ca2",
+        "tonalRamp": [
+          "#0a0b10",
+          "#23252b",
+          "#404248",
+          "#5f6168",
+          "#808289",
+          "#a2a5ac",
+          "#c6c9d1",
+          "#eceef6"
+        ]
+      },
+      "rule": {
+        "role": "neutral",
+        "displayName": "Rule",
+        "purpose": "Hairline dividers and chart grid.",
+        "canonical": "#dcddd9",
+        "dark": "#2e3036",
+        "tonalRamp": [
+          "#0b0b09",
+          "#252522",
+          "#42423f",
+          "#61625e",
+          "#82837f",
+          "#a4a5a2",
+          "#c9cac6",
+          "#eeefeb"
+        ]
+      },
+      "rule-strong": {
+        "role": "neutral",
+        "displayName": "Rule Strong",
+        "purpose": "Control borders, perforation dots, axis lines.",
+        "canonical": "#b9bab5",
+        "dark": "#474950",
+        "tonalRamp": [
+          "#0b0c08",
+          "#252522",
+          "#42423e",
+          "#61625d",
+          "#82837e",
+          "#a5a6a1",
+          "#c9cac5",
+          "#eeefea"
+        ]
+      },
+      "stamp": {
+        "role": "primary",
+        "displayName": "Stamp Ink",
+        "purpose": "The one action colour: the rubber-stamp primary button.",
+        "canonical": "#17181b",
+        "dark": "#ececea",
+        "tonalRamp": [
+          "#0a0b0e",
+          "#242528",
+          "#414245",
+          "#606165",
+          "#818286",
+          "#a3a5a9",
+          "#c7c9cd",
+          "#edeef3"
+        ]
+      },
+      "stamp-hover": {
+        "role": "primary",
+        "displayName": "Stamp Ink Hover",
+        "purpose": "Stamp hover fill.",
+        "canonical": "#2d2f34",
+        "dark": "#ffffff",
+        "tonalRamp": [
+          "#090b0f",
+          "#23252a",
+          "#404247",
+          "#5f6167",
+          "#808288",
+          "#a2a5ab",
+          "#c6c9cf",
+          "#eceef5"
+        ]
+      },
+      "on-stamp": {
+        "role": "primary",
+        "displayName": "On Stamp",
+        "purpose": "Label on a stamp button.",
+        "canonical": "#ffffff",
+        "dark": "#111214",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      },
+      "focus": {
+        "role": "neutral",
+        "displayName": "Focus Blue",
+        "purpose": "Focus outline and input focus border.",
+        "canonical": "#2459c9",
+        "dark": "#7fa9ff",
+        "tonalRamp": [
+          "#000728",
+          "#021d5e",
+          "#0033a1",
+          "#2257c7",
+          "#437bee",
+          "#77a4f9",
+          "#aecafd",
+          "#e7effe"
+        ]
+      },
+      "danger": {
+        "role": "error",
+        "displayName": "Danger",
+        "purpose": "Destructive actions, errors, overdue waiting time.",
+        "canonical": "#b92d1b",
+        "dark": "#ff7a63",
+        "tonalRamp": [
+          "#1d0100",
+          "#490903",
+          "#7d0e02",
+          "#b02311",
+          "#d84c38",
+          "#f97964",
+          "#fcb5a7",
+          "#fee9e5"
+        ]
+      },
+      "danger-hover": {
+        "role": "error",
+        "displayName": "Danger Hover",
+        "purpose": "Destructive hover fill.",
+        "canonical": "#9c2415",
+        "dark": "#ff927f",
+        "tonalRamp": [
+          "#1f0000",
+          "#4c0300",
+          "#7c1105",
+          "#a83121",
+          "#d05644",
+          "#f87a66",
+          "#fbb5a8",
+          "#fee9e5"
+        ]
+      },
+      "danger-wash": {
+        "role": "error",
+        "displayName": "Danger Wash",
+        "purpose": "Overdue chip and error wash.",
+        "canonical": "#fbe9e5",
+        "dark": "#3a1b16",
+        "tonalRamp": [
+          "#130806",
+          "#2e221f",
+          "#4c3e3b",
+          "#6c5d5a",
+          "#8e7e7b",
+          "#b1a19d",
+          "#d6c5c1",
+          "#fceae6"
+        ]
+      },
+      "success": {
+        "role": "success",
+        "displayName": "Success",
+        "purpose": "Confirmation text.",
+        "canonical": "#1c6a41",
+        "dark": "#8fd8ab",
+        "tonalRamp": [
+          "#000f05",
+          "#052d18",
+          "#04502c",
+          "#267248",
+          "#4b9468",
+          "#6eb88a",
+          "#92ddae",
+          "#c8feda"
+        ]
+      },
+      "success-wash": {
+        "role": "success",
+        "displayName": "Success Wash",
+        "purpose": "Confirmation wash.",
+        "canonical": "#e3f4ea",
+        "dark": "#16301f",
+        "tonalRamp": [
+          "#040e08",
+          "#1c2821",
+          "#38463e",
+          "#57655d",
+          "#77877e",
+          "#9aaaa0",
+          "#bdcec4",
+          "#e2f3e9"
+        ]
+      },
+      "chart-shop": {
+        "role": "data",
+        "displayName": "Shop Violet",
+        "purpose": "Shop-order data series. Validated: CVD dE >= 8, contrast >= 3:1 on card.",
+        "canonical": "#5b47c9",
+        "dark": "#8a78e6",
+        "tonalRamp": [
+          "#0a012c",
+          "#24006b",
+          "#3f1da1",
+          "#5a46c8",
+          "#796aef",
+          "#9b97f9",
+          "#c2c3fe",
+          "#ecedfe"
+        ]
+      },
+      "chart-quick": {
+        "role": "data",
+        "displayName": "Quick Teal",
+        "purpose": "Quick-order data series. Validated: CVD dE >= 8, contrast >= 3:1 on card.",
+        "canonical": "#00909c",
+        "dark": "#23a6af",
+        "tonalRamp": [
+          "#000e10",
+          "#022b2f",
+          "#0c4b51",
+          "#076e78",
+          "#0c939f",
+          "#46b7c3",
+          "#6fdce9",
+          "#c9f9fe"
+        ]
+      },
+      "chart-neutral": {
+        "role": "data",
+        "displayName": "Chart Neutral",
+        "purpose": "Single-series bars and the neutral series. Validated.",
+        "canonical": "#5f6573",
+        "dark": "#a3a8b4",
+        "tonalRamp": [
+          "#070b15",
+          "#202531",
+          "#3c424f",
+          "#5b616f",
+          "#7c8291",
+          "#9ea5b4",
+          "#c2c9d9",
+          "#e7eeff"
+        ]
+      },
+      "chart-neutral-soft": {
+        "role": "data",
+        "displayName": "Chart Neutral Soft",
+        "purpose": "Secondary share of a neutral split bar.",
+        "canonical": "#b7bbc5",
+        "dark": "#4a4e57",
+        "tonalRamp": [
+          "#090b11",
+          "#22252c",
+          "#3f424a",
+          "#5e616a",
+          "#7e828c",
+          "#a1a5af",
+          "#c5c9d3",
+          "#eaeef9"
+        ]
+      },
+      "stock-canary": {
+        "role": "stage",
+        "displayName": "Canary Stock Band",
+        "purpose": "Stub band and swatch. Intake (new, pickup scheduled); also the look-here highlight for unread and touched rows.",
+        "canonical": "#f5cf33",
+        "dark": "#c7a62a",
+        "tonalRamp": [
+          "#0f0b00",
+          "#2d2402",
+          "#4e410c",
+          "#73600b",
+          "#9a8012",
+          "#c3a200",
+          "#ecc623",
+          "#feefb9"
+        ]
+      },
+      "stock-canary-ink": {
+        "role": "stage",
+        "displayName": "Canary Stock Ink",
+        "purpose": "Status-stamp text and marks on white for this stage family.",
+        "canonical": "#6a5200",
+        "dark": "#f0d46c",
+        "tonalRamp": [
+          "#100a00",
+          "#302300",
+          "#523f05",
+          "#765e15",
+          "#997f3c",
+          "#bca25f",
+          "#e1c782",
+          "#ffedc1"
+        ]
+      },
+      "stock-canary-wash": {
+        "role": "stage",
+        "displayName": "Canary Stock Wash",
+        "purpose": "Status-stamp background for this stage family.",
+        "canonical": "#fdf6d6",
+        "dark": "#2e2812",
+        "tonalRamp": [
+          "#0f0b00",
+          "#2b250a",
+          "#484227",
+          "#686246",
+          "#898366",
+          "#aca688",
+          "#d1caab",
+          "#f6efcf"
+        ]
+      },
+      "stock-pink": {
+        "role": "stage",
+        "displayName": "Pink Stock Band",
+        "purpose": "Stub band and swatch. At the laundry (picked up, at the laundry, awaiting payment).",
+        "canonical": "#f3a2bf",
+        "dark": "#c47893",
+        "tonalRamp": [
+          "#1d000c",
+          "#470426",
+          "#6a2643",
+          "#8e4662",
+          "#b36784",
+          "#d88aa6",
+          "#fab0ca",
+          "#fee8ef"
+        ]
+      },
+      "stock-pink-ink": {
+        "role": "stage",
+        "displayName": "Pink Stock Ink",
+        "purpose": "Status-stamp text and marks on white for this stage family.",
+        "canonical": "#8a2b53",
+        "dark": "#f4abc6",
+        "tonalRamp": [
+          "#1c010b",
+          "#470625",
+          "#751541",
+          "#9a3a61",
+          "#c05c82",
+          "#e77fa4",
+          "#feafc9",
+          "#fee8ee"
+        ]
+      },
+      "stock-pink-wash": {
+        "role": "stage",
+        "displayName": "Pink Stock Wash",
+        "purpose": "Status-stamp background for this stage family.",
+        "canonical": "#fdeaf1",
+        "dark": "#33202a",
+        "tonalRamp": [
+          "#13070c",
+          "#2e2126",
+          "#4c3d43",
+          "#6c5c62",
+          "#8e7d83",
+          "#b1a0a6",
+          "#d6c3ca",
+          "#fce9f0"
+        ]
+      },
+      "stock-green": {
+        "role": "stage",
+        "displayName": "Green Stock Band",
+        "purpose": "Stub band and swatch. Cleaning.",
+        "canonical": "#8fd4a9",
+        "dark": "#68a782",
+        "tonalRamp": [
+          "#000f05",
+          "#032d18",
+          "#0e4f2f",
+          "#2c714b",
+          "#4f936b",
+          "#73b78d",
+          "#96dcb0",
+          "#c6feda"
+        ]
+      },
+      "stock-green-ink": {
+        "role": "stage",
+        "displayName": "Green Stock Ink",
+        "purpose": "Status-stamp text and marks on white for this stage family.",
+        "canonical": "#1c6a41",
+        "dark": "#9ddcb6",
+        "tonalRamp": [
+          "#000f05",
+          "#052d18",
+          "#04502c",
+          "#267248",
+          "#4b9468",
+          "#6eb88a",
+          "#92ddae",
+          "#c8feda"
+        ]
+      },
+      "stock-green-wash": {
+        "role": "stage",
+        "displayName": "Green Stock Wash",
+        "purpose": "Status-stamp background for this stage family.",
+        "canonical": "#e3f4ea",
+        "dark": "#172a20",
+        "tonalRamp": [
+          "#040e08",
+          "#1c2821",
+          "#38463e",
+          "#57655d",
+          "#77877e",
+          "#9aaaa0",
+          "#bdcec4",
+          "#e2f3e9"
+        ]
+      },
+      "stock-blue": {
+        "role": "stage",
+        "displayName": "Blue Stock Band",
+        "purpose": "Stub band and swatch. Dispatch (out for delivery).",
+        "canonical": "#9fc5f1",
+        "dark": "#7a9fcb",
+        "tonalRamp": [
+          "#000b1d",
+          "#032548",
+          "#224468",
+          "#41648b",
+          "#6285ae",
+          "#83a8d3",
+          "#a7cdf9",
+          "#e4f0fe"
+        ]
+      },
+      "stock-blue-ink": {
+        "role": "stage",
+        "displayName": "Blue Stock Ink",
+        "purpose": "Status-stamp text and marks on white for this stage family.",
+        "canonical": "#1d4d8c",
+        "dark": "#abcdf6",
+        "tonalRamp": [
+          "#000a20",
+          "#04244d",
+          "#0f407e",
+          "#3161a2",
+          "#5284c7",
+          "#74a7ed",
+          "#a9ccfb",
+          "#e4f0ff"
+        ]
+      },
+      "stock-blue-wash": {
+        "role": "stage",
+        "displayName": "Blue Stock Wash",
+        "purpose": "Status-stamp background for this stage family.",
+        "canonical": "#e6f0fc",
+        "dark": "#182435",
+        "tonalRamp": [
+          "#060c13",
+          "#1e262e",
+          "#3b434c",
+          "#5a626c",
+          "#7a838e",
+          "#9da6b1",
+          "#c1cad6",
+          "#e6f0fc"
+        ]
+      },
+      "stock-red": {
+        "role": "stage",
+        "displayName": "Red Stamp Stock Band",
+        "purpose": "Stub band and swatch. Issues (pickup or delivery failed).",
+        "canonical": "#e5634c",
+        "dark": "#e0664f",
+        "tonalRamp": [
+          "#1e0100",
+          "#4a0701",
+          "#7a1807",
+          "#ab2d18",
+          "#d3533d",
+          "#fc775f",
+          "#fdb4a5",
+          "#ffe9e4"
+        ]
+      },
+      "stock-red-ink": {
+        "role": "stage",
+        "displayName": "Red Stamp Stock Ink",
+        "purpose": "Status-stamp text and marks on white for this stage family.",
+        "canonical": "#a3261a",
+        "dark": "#ff8f7a",
+        "tonalRamp": [
+          "#1e0100",
+          "#4d0100",
+          "#7e0c04",
+          "#aa2e21",
+          "#d25443",
+          "#fa7865",
+          "#fdb4a8",
+          "#ffe9e5"
+        ]
+      },
+      "stock-red-wash": {
+        "role": "stage",
+        "displayName": "Red Stamp Stock Wash",
+        "purpose": "Status-stamp background for this stage family.",
+        "canonical": "#fbe9e5",
+        "dark": "#3a1b16",
+        "tonalRamp": [
+          "#130806",
+          "#2e221f",
+          "#4c3e3b",
+          "#6c5d5a",
+          "#8e7e7b",
+          "#b1a19d",
+          "#d6c5c1",
+          "#fceae6"
+        ]
+      },
+      "stock-grey": {
+        "role": "stage",
+        "displayName": "Grey Stock Band",
+        "purpose": "Stub band and swatch. Done (delivered, cancelled); the period-receipt stub.",
+        "canonical": "#cfcdc6",
+        "dark": "#8a8882",
+        "tonalRamp": [
+          "#0c0b07",
+          "#272520",
+          "#44423c",
+          "#63615b",
+          "#84827c",
+          "#a7a59e",
+          "#cbc9c2",
+          "#f0eee7"
+        ]
+      },
+      "stock-grey-ink": {
+        "role": "stage",
+        "displayName": "Grey Stock Ink",
+        "purpose": "Status-stamp text and marks on white for this stage family.",
+        "canonical": "#55544f",
+        "dark": "#c2c0b9",
+        "tonalRamp": [
+          "#0c0b08",
+          "#262521",
+          "#43423d",
+          "#62615c",
+          "#83827d",
+          "#a6a59f",
+          "#cac9c3",
+          "#f0efe9"
+        ]
+      },
+      "stock-grey-wash": {
+        "role": "stage",
+        "displayName": "Grey Stock Wash",
+        "purpose": "Status-stamp background for this stage family.",
+        "canonical": "#f0efec",
+        "dark": "#26262a",
+        "tonalRamp": [
+          "#0c0b09",
+          "#262523",
+          "#43423f",
+          "#62615f",
+          "#83827f",
+          "#a6a5a2",
+          "#cac9c6",
+          "#efeeeb"
+        ]
+      },
+      "band-label": {
+        "role": "neutral",
+        "displayName": "Band Label",
+        "purpose": "Fixed near-black for words and pictograms printed on a stock band, in both themes.",
+        "canonical": "#1d1d1f",
+        "dark": "#1d1d1f",
+        "tonalRamp": [
+          "#0b0b0d",
+          "#252527",
+          "#424244",
+          "#616163",
+          "#828284",
+          "#a5a5a7",
+          "#c9c9cb",
+          "#eeeef1"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "numerals-display": {
+        "displayName": "Numerals Display",
+        "purpose": "Order number heading an order's detail page."
+      },
+      "numerals-ticket": {
+        "displayName": "Numerals Ticket",
+        "purpose": "Order number on each ticket."
+      },
+      "numerals-count": {
+        "displayName": "Numerals Count",
+        "purpose": "Stage counts on the rail and column headers (dashboard tallies at 30px)."
+      },
+      "numerals-inline": {
+        "displayName": "Numerals Inline",
+        "purpose": "Times, slot windows, money and table figures."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Page titles."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Column headers and sheet titles."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Names, table cells, form values."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Field labels, status stamps, small buttons."
+      },
+      "meta": {
+        "displayName": "Meta",
+        "purpose": "Ticket metadata, hints, stub labels, chart legends."
+      }
+    },
+    "shadows": [
+      {
+        "name": "ticket",
+        "value": "0 1px 1px rgb(23 24 27 / 0.06), 0 3px 10px -2px rgb(23 24 27 / 0.1)",
+        "dark": "0 1px 1px rgb(0 0 0 / 0.4), 0 4px 12px -2px rgb(0 0 0 / 0.5)",
+        "purpose": "Card stock at rest: tickets, sheets, stage rail, active nav item, selected segment."
+      },
+      {
+        "name": "lift",
+        "value": "0 2px 4px rgb(23 24 27 / 0.08), 0 12px 28px -6px rgb(23 24 27 / 0.18)",
+        "dark": "0 2px 4px rgb(0 0 0 / 0.45), 0 14px 32px -6px rgb(0 0 0 / 0.6)",
+        "purpose": "Ticket hover, dialogs, menus, toasts, chart tooltips."
+      },
+      {
+        "name": "stamp-edge",
+        "value": "0 1px 0 rgb(0 0 0 / 0.2)",
+        "purpose": "Bottom edge under a stamp button."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out-expo",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Stub tear, ticket move and page view transitions."
+      },
+      {
+        "name": "stub-tear",
+        "value": "180ms ease-out-expo; translateY(-5px) rotate(-2.2deg) at 55%, settle translateY(-2px) rotate(-1deg); perforation to 35% opacity",
+        "purpose": "Committing a stamp tears the stub; pivots from the end corner, mirrored in RTL."
+      },
+      {
+        "name": "ticket-move",
+        "value": "180ms ease-out-expo named view transition per ticket",
+        "purpose": "The ticket travels to its next column."
+      },
+      {
+        "name": "stamp-press",
+        "value": "140ms ease-out; scale 1 -> 0.96 -> 1",
+        "purpose": "Pressing any button."
+      },
+      {
+        "name": "state",
+        "value": "150ms ease-out",
+        "purpose": "Background, colour, border and shadow state changes."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "1ms for all animations and transitions",
+        "purpose": "prefers-reduced-motion: reduce."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "md",
+        "value": "768px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px",
+        "purpose": "Nav rail appears."
+      },
+      {
+        "name": "rack-2",
+        "value": "44rem container",
+        "purpose": "Up to 2 rack columns."
+      },
+      {
+        "name": "rack-3",
+        "value": "60rem container"
+      },
+      {
+        "name": "rack-4",
+        "value": "70rem container"
+      },
+      {
+        "name": "rack-5",
+        "value": "88rem container"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Stamp Button",
+      "kind": "button",
+      "refersTo": "button-stamp",
+      "description": "The one action colour: the legal next step on a ticket or page.",
+      "html": "<button class=\"ds-btn-stamp\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M2 21a8 8 0 0 1 13.292-6\"/><circle cx=\"10\" cy=\"8\" r=\"5\"/><path d=\"m16 19 2 2 4-4\"/></svg>Assign pickup driver</button>",
+      "css": ".ds-btn-stamp{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:40px;padding:0 16px;border:0;border-radius:8px;background:var(--stamp,#17181b);color:var(--on-stamp,#fff);font:500 14px/1 'Readex Pro',ui-sans-serif,system-ui,sans-serif;box-shadow:0 1px 0 rgb(0 0 0/.2);cursor:pointer;transition:background-color 150ms ease-out,transform 150ms ease-out}.ds-btn-stamp:hover{background:var(--stamp-hover,#2d2f34)}.ds-btn-stamp:focus-visible{outline:2px solid var(--focus,#2459c9);outline-offset:2px}.ds-btn-stamp:active{animation:ds-stamp-press 140ms ease-out}@keyframes ds-stamp-press{0%{transform:scale(1)}40%{transform:scale(.96)}100%{transform:scale(1)}}"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Default button for secondary legal actions.",
+      "html": "<button class=\"ds-btn-outline\">Mark delivery failed</button>",
+      "css": ".ds-btn-outline{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 16px;border:1px solid var(--rule-strong,#b9bab5);border-radius:8px;background:var(--card,#fff);color:var(--ink,#17181b);font:500 14px/1 'Readex Pro',ui-sans-serif,system-ui,sans-serif;cursor:pointer;transition:background-color 150ms ease-out}.ds-btn-outline:hover{background:var(--card-recessed,#f5f5f3)}.ds-btn-outline:focus-visible{outline:2px solid var(--focus,#2459c9);outline-offset:2px}"
+    },
+    {
+      "name": "Danger Outline Button",
+      "kind": "button",
+      "refersTo": "button-danger-outline",
+      "description": "Offers a destructive step such as cancel.",
+      "html": "<button class=\"ds-btn-danger-outline\">Cancel order</button>",
+      "css": ".ds-btn-danger-outline{display:inline-flex;align-items:center;height:40px;padding:0 16px;border:1px solid color-mix(in srgb,var(--danger,#b92d1b) 50%,transparent);border-radius:8px;background:var(--card,#fff);color:var(--danger,#b92d1b);font:500 14px/1 'Readex Pro',ui-sans-serif,system-ui,sans-serif;cursor:pointer}.ds-btn-danger-outline:hover{background:var(--danger-wash,#fbe9e5)}.ds-btn-danger-outline:focus-visible{outline:2px solid var(--focus,#2459c9);outline-offset:2px}"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Labelled input with focus ring.",
+      "html": "<label class=\"ds-field\"><span class=\"ds-field-label\">Customer phone</span><input class=\"ds-input\" placeholder=\"+971 50 123 4567\"></label>",
+      "css": ".ds-field{display:flex;flex-direction:column;gap:6px;font-family:'Readex Pro',ui-sans-serif,system-ui,sans-serif}.ds-field-label{font-size:13px;font-weight:500;color:var(--ink-2,#4b4d54)}.ds-input{height:40px;padding:0 12px;border:1px solid var(--rule-strong,#b9bab5);border-radius:8px;background:var(--card,#fff);color:var(--ink,#17181b);font:400 14px 'Readex Pro',ui-sans-serif,system-ui,sans-serif;outline:none;transition:border-color 150ms,box-shadow 150ms}.ds-input::placeholder{color:var(--ink-3,#62646b)}.ds-input:focus-visible{border-color:var(--focus,#2459c9);box-shadow:0 0 0 2px color-mix(in srgb,var(--focus,#2459c9) 25%,transparent)}"
+    },
+    {
+      "name": "Status Stamp",
+      "kind": "chip",
+      "refersTo": "status-stamp-pink",
+      "description": "Status as stock wash + pictogram + words; never colour alone.",
+      "html": "<span class=\"ds-stamp\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7\"/><path d=\"M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8\"/><path d=\"M2 7h20\"/></svg>At the laundry</span>",
+      "css": ".ds-stamp{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 8px;border:1px solid color-mix(in srgb,currentColor 15%,transparent);border-radius:4px;background:var(--stock-pink-wash,#fdeaf1);color:var(--stock-pink-ink,#8a2b53);font:500 13px/1 'Readex Pro',ui-sans-serif,system-ui,sans-serif;white-space:nowrap}"
+    },
+    {
+      "name": "Nav Item",
+      "kind": "nav",
+      "refersTo": "nav-item",
+      "description": "Start-edge rail rows; the active row becomes a card.",
+      "html": "<nav class=\"ds-nav\"><a class=\"ds-nav-item is-active\" href=\"#\">Orders</a><a class=\"ds-nav-item\" href=\"#\">Dashboard</a><a class=\"ds-nav-item\" href=\"#\">Notifications<span class=\"ds-nav-badge\">22</span></a></nav>",
+      "css": ".ds-nav{display:flex;flex-direction:column;gap:2px;width:232px;padding:12px;background:var(--counter,#e8eaed)}.ds-nav-item{display:flex;align-items:center;gap:12px;height:40px;padding:0 12px;border-radius:8px;color:var(--ink-2,#4b4d54);font:500 14px 'Readex Pro',ui-sans-serif,system-ui,sans-serif;text-decoration:none;transition:background-color 150ms}.ds-nav-item:hover{background:color-mix(in srgb,var(--counter-deep,#dde0e4) 70%,transparent);color:var(--ink,#17181b)}.ds-nav-item.is-active{background:var(--card,#fff);color:var(--ink,#17181b);box-shadow:var(--shadow-ticket,0 1px 1px rgb(23 24 27/.06),0 3px 10px -2px rgb(23 24 27/.1))}.ds-nav-item:focus-visible{outline:2px solid var(--focus,#2459c9);outline-offset:2px}.ds-nav-badge{margin-inline-start:auto;padding:0 6px;border-radius:4px;background:var(--stock-canary,#f5cf33);color:#3d3000;font:400 11px/20px 'Martian Mono',ui-monospace,monospace}"
+    },
+    {
+      "name": "Claim Ticket",
+      "kind": "card",
+      "refersTo": "ticket",
+      "description": "Signature: stock band stub, perforation with notches, numbering-machine number, waiting chip and one stamp.",
+      "html": "<div class=\"ds-ground\"><article class=\"ds-ticket\"><div class=\"ds-ticket-stub\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><polyline points=\"22 12 16 12 14 15 10 15 8 12 2 12\"/><path d=\"M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z\"/></svg><span>New</span></div><div class=\"ds-perforation\"></div><div class=\"ds-ticket-body\"><div class=\"ds-ticket-head\"><a class=\"ds-ticket-number\" href=\"#\">1212</a><span class=\"ds-wait is-late\">3d 3h</span></div><p class=\"ds-ticket-name\">Khalid Al Mansouri</p><p class=\"ds-ticket-meta\">Pickup <span class=\"ds-num\">Sat, 26 Sep · 09:00–11:00</span></p><button class=\"ds-ticket-stamp\">Assign pickup driver</button></div></article></div>",
+      "css": ".ds-ground{padding:24px;background:var(--counter,#e8eaed)}.ds-ticket{position:relative;width:280px;border-radius:6px;background:var(--card,#fff);color:var(--ink,#17181b);font-family:'Readex Pro',ui-sans-serif,system-ui,sans-serif;box-shadow:var(--shadow-ticket,0 1px 1px rgb(23 24 27/.06),0 3px 10px -2px rgb(23 24 27/.1));transition:box-shadow 150ms}.ds-ticket:hover{box-shadow:var(--shadow-lift,0 2px 4px rgb(23 24 27/.08),0 12px 28px -6px rgb(23 24 27/.18))}.ds-ticket::before,.ds-ticket::after{content:'';position:absolute;top:29.5px;width:12px;height:12px;border-radius:9999px;background:var(--counter,#e8eaed);z-index:1}.ds-ticket::before{inset-inline-start:-6px}.ds-ticket::after{inset-inline-end:-6px}.ds-ticket-stub{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;border-radius:6px 6px 0 0;background:var(--stock-canary,#f5cf33);color:#1d1d1f;font-size:12.5px;font-weight:500}.ds-perforation{height:3px;background-image:radial-gradient(circle,var(--rule-strong,#b9bab5) 1.1px,transparent 1.4px);background-size:7px 3px;background-repeat:repeat-x;background-position:center}.ds-ticket-body{display:flex;flex-direction:column;gap:12px;padding:12px 14px 14px}.ds-ticket-head{display:flex;align-items:flex-start;justify-content:space-between}.ds-ticket-number{font:600 32px/1 'Martian Mono',ui-monospace,monospace;font-stretch:84%;font-variant-numeric:tabular-nums slashed-zero;letter-spacing:-.04em;color:inherit;text-decoration:none}.ds-ticket-number:hover{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px}.ds-wait{padding:2px 6px;border-radius:4px;font:700 12px 'Martian Mono',ui-monospace,monospace;letter-spacing:-.02em}.ds-wait.is-late{background:var(--danger,#b92d1b);color:#fff}.ds-ticket-name{margin:0;font-size:14px;font-weight:500}.ds-ticket-meta{margin:0;font-size:12.5px;color:var(--ink-3,#62646b)}.ds-num{font-family:'Martian Mono',ui-monospace,monospace;font-size:12px;color:var(--ink-2,#4b4d54)}.ds-ticket-stamp{height:40px;border:0;border-radius:8px;background:var(--stamp,#17181b);color:var(--on-stamp,#fff);font:500 14px 'Readex Pro',ui-sans-serif,system-ui,sans-serif;box-shadow:0 1px 0 rgb(0 0 0/.2);cursor:pointer}.ds-ticket-stamp:hover{background:var(--stamp-hover,#2d2f34)}.ds-ticket-stamp:focus-visible{outline:2px solid var(--focus,#2459c9);outline-offset:2px}"
+    },
+    {
+      "name": "Stage Rail Cell",
+      "kind": "custom",
+      "refersTo": null,
+      "description": "A stage in the rail: stock band on top, pictogram, big count, bilingual names.",
+      "html": "<button class=\"ds-rail-cell\"><span class=\"ds-rail-band\"></span><span class=\"ds-rail-row\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 6h3\"/><path d=\"M17 6h.01\"/><rect width=\"18\" height=\"20\" x=\"3\" y=\"2\" rx=\"2\"/><circle cx=\"12\" cy=\"13\" r=\"5\"/></svg><span class=\"ds-rail-count\">4</span></span><span class=\"ds-rail-name\">Cleaning</span><span class=\"ds-rail-alt\" lang=\"ar\" dir=\"rtl\">قيد التنظيف</span></button>",
+      "css": ".ds-rail-cell{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:140px;padding:12px 12px 10px;border:0;border-radius:6px;background:var(--card,#fff);color:var(--ink,#17181b);font-family:'Readex Pro',ui-sans-serif,system-ui,sans-serif;text-align:start;box-shadow:var(--shadow-ticket,0 1px 1px rgb(23 24 27/.06),0 3px 10px -2px rgb(23 24 27/.1));cursor:pointer;overflow:hidden}.ds-rail-cell:hover{background:var(--card-recessed,#f5f5f3)}.ds-rail-cell:focus-visible{outline:2px solid var(--focus,#2459c9);outline-offset:2px}.ds-rail-band{position:absolute;inset:0 0 auto 0;height:4px;background:var(--stock-green,#8fd4a9)}.ds-rail-row{display:flex;width:100%;align-items:center;justify-content:space-between;color:var(--ink-2,#4b4d54)}.ds-rail-count{font:600 22px/1 'Martian Mono',ui-monospace,monospace;font-stretch:82%;letter-spacing:-.04em;color:var(--ink,#17181b)}.ds-rail-name{margin-top:4px;font-size:13px;font-weight:600;line-height:1.25}.ds-rail-alt{font-size:11.5px;line-height:1.25;color:var(--ink-3,#62646b)}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Claim Ticket Stock",
+    "overview": "**Creative North Star: \"Claim Ticket Stock\"**\n\nEvery order is its torn-off claim ticket: a numbered white card that travels the rack stage by stage, headed by a band of coloured ticket stock that names its stage family, and carrying exactly one stamped next action. The portal is the sorting-room counter those tickets sit on. It is dense, fast to scan and physical in a quiet way: card stock on a cool counter-grey ground, a soft lift under each card, a dotted perforation with edge notches where the stub tears off, and big tabular numbering-machine digits for every order number, count and amount.\n\nThe world rejects the SaaS default of KPI cards over a generic data table. Summaries read as ruled receipts with dotted leaders; stages read as a rack of columns, each headed by its stock swatch, a bilingual name and a big count. Solid ink is the only action colour, used as a rubber stamp; red is reserved for destructive and failed. Dark mode is the facility after hours: charcoal counter, graphite card, the same stocks muted.\n\nEnglish and Arabic are both native. Layout mirrors by construction (logical properties, start/end edges), Arabic is never letter-spaced, and digits stay Latin in both languages so the numbering machine reads the same. This world is independent of the sister mobile app and inherits none of its palette, fonts or shapes.",
+    "keyCharacteristics": [
+      "White ticket cards on a cool counter-grey ground, with a soft two-layer lift.",
+      "Six ticket stocks (canary, pink, green, blue, red, grey) name stage families and nothing else.",
+      "One action colour: solid ink, pressed like a rubber stamp.",
+      "Martian Mono numbering-machine digits, condensed on the wdth axis, for every figure.",
+      "Perforated stub with half-circle notches as the recurring signature.",
+      "Status is always stock + pictogram + label; never colour alone.",
+      "Full EN/AR bidirectionality and first-class light and dark themes."
+    ],
+    "rules": [
+      {
+        "name": "The Stock Is The Stage Rule",
+        "body": "Ticket stocks are reserved for stages (and canary's look-here highlight). They are never reused for data series; charts draw only from the chart palette.",
+        "section": "colors"
+      },
+      {
+        "name": "The Never Colour Alone Rule",
+        "body": "Status is always stock + pictogram + label. A swatch without its words and icon is decoration, not status.",
+        "section": "colors"
+      },
+      {
+        "name": "The One Stamp Rule",
+        "body": "Solid ink is the only fill for a primary action, and a ticket shows one stamp. Red fill is for destructive actions and failures only.",
+        "section": "colors"
+      },
+      {
+        "name": "The Numbering Machine Rule",
+        "body": "Every order number, count, amount and time is set in Martian Mono with tabular, slashed-zero digits, condensed on the wdth axis (80 to 88%, tighter as the size grows). Digits are Latin in both languages.",
+        "section": "typography"
+      },
+      {
+        "name": "The Untracked Arabic Rule",
+        "body": "Right-to-left text never takes letter-spacing; the portal forces it to zero under `dir=\"rtl\"`. There are no uppercase or tracked labels anywhere.",
+        "section": "typography"
+      },
+      {
+        "name": "The Bidi Isolation Rule",
+        "body": "Phone numbers and time ranges are set left-to-right and kept whole; names inserted into sentences are wrapped in first-strong isolates.",
+        "section": "typography"
+      },
+      {
+        "name": "The Card Stock Rule",
+        "body": "Only card stock casts a shadow. Controls, chips and stamps sit flat on the card.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do give every order its ticket: stock band, perforation with notches, big tabular number and exactly one stamp for its legal next step.",
+      "Do show status as stock + pictogram + label, every time, in every theme.",
+      "Do set every figure in Martian Mono, tabular and slashed-zero, condensed on the wdth axis, with Latin digits in both languages.",
+      "Do draw charts from the validated chart palette only (shop, quick, neutral), with the chart-neutral family for single-series bars.",
+      "Do use logical properties and start/end edges so Arabic mirrors by construction; mirror directional icons only.",
+      "Do keep stock band labels in the band-label near-black and check each band against it for 4.5:1 in both themes.",
+      "Do size rack columns so a whole number of tickets fits the width."
+    ],
+    "donts": [
+      "Don't build dashboards as KPI cards over a generic data table; use the rack, ruled receipts and charts.",
+      "Don't reuse a stage stock for a data series, a category or a decorative accent.",
+      "Don't convey status by colour alone.",
+      "Don't fill a primary action with anything but stamp ink, or fill with red for anything that isn't destructive or failed.",
+      "Don't letter-space Arabic, or set labels in tracked uppercase.",
+      "Don't give controls or chips their own shadow; only card stock lifts.",
+      "Don't fabricate metrics, customers or logos; empty states stay empty."
+    ]
+  }
+}

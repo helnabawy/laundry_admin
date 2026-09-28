@@ -1,0 +1,391 @@
+@import "tailwindcss";
+
+/*
+ * Laundry Admin: "Claim Ticket Stock".
+ *
+ * Every order is a numbered claim ticket on white card stock. Ticket stock
+ * colours name the stage family; solid ink is the single action colour (the
+ * rubber stamp). Stock colour never carries status alone; it always comes
+ * with a pictogram and a label.
+ */
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  color-scheme: light;
+
+  /* Grounds */
+  --counter: #e8eaed;
+  --counter-deep: #dde0e4;
+  --card: #ffffff;
+  --card-recessed: #f5f5f3;
+
+  /* Ink */
+  --ink: #17181b;
+  --ink-2: #4b4d54;
+  --ink-3: #62646b;
+  --rule: #dcddd9;
+  --rule-strong: #b9bab5;
+
+  /* The stamp: the one action colour */
+  --stamp: #17181b;
+  --stamp-hover: #2d2f34;
+  --on-stamp: #ffffff;
+  --focus: #2459c9;
+
+  --danger: #b92d1b;
+  --danger-hover: #9c2415;
+  --danger-wash: #fbe9e5;
+  --success: #1c6a41;
+  --success-wash: #e3f4ea;
+
+  /* Ticket stocks: band fill + deep ink for text/marks on white */
+  --stock-canary: #f5cf33;
+  --stock-canary-ink: #6a5200;
+  --stock-canary-wash: #fdf6d6;
+  --stock-pink: #f3a2bf;
+  --stock-pink-ink: #8a2b53;
+  --stock-pink-wash: #fdeaf1;
+  --stock-green: #8fd4a9;
+  --stock-green-ink: #1c6a41;
+  --stock-green-wash: #e3f4ea;
+  --stock-blue: #9fc5f1;
+  --stock-blue-ink: #1d4d8c;
+  --stock-blue-wash: #e6f0fc;
+  --stock-red: #e5634c;
+  --stock-red-ink: #a3261a;
+  --stock-red-wash: #fbe9e5;
+  --stock-grey: #cfcdc6;
+  --stock-grey-ink: #55544f;
+  --stock-grey-wash: #f0efec;
+
+  /* Charts (validated: CVD ΔE ≥ 8, contrast ≥ 3:1 on card) */
+  --chart-shop: #5b47c9;
+  --chart-quick: #00909c;
+  --chart-neutral: #5f6573;
+  --chart-neutral-soft: #b7bbc5;
+
+  --shadow-ticket: 0 1px 1px rgb(23 24 27 / 0.06), 0 3px 10px -2px rgb(23 24 27 / 0.1);
+  --shadow-lift: 0 2px 4px rgb(23 24 27 / 0.08), 0 12px 28px -6px rgb(23 24 27 / 0.18);
+}
+
+.dark {
+  color-scheme: dark;
+
+  /* The facility after hours */
+  --counter: #111214;
+  --counter-deep: #0b0c0d;
+  --card: #1b1c20;
+  --card-recessed: #232429;
+
+  --ink: #ececea;
+  --ink-2: #b6b7bc;
+  --ink-3: #9a9ca2;
+  --rule: #2e3036;
+  --rule-strong: #474950;
+
+  --stamp: #ececea;
+  --stamp-hover: #ffffff;
+  --on-stamp: #111214;
+  --focus: #7fa9ff;
+
+  --danger: #ff7a63;
+  --danger-hover: #ff927f;
+  --danger-wash: #3a1b16;
+  --success: #8fd8ab;
+  --success-wash: #16301f;
+
+  --stock-canary: #c7a62a;
+  --stock-canary-ink: #f0d46c;
+  --stock-canary-wash: #2e2812;
+  --stock-pink: #c47893;
+  --stock-pink-ink: #f4abc6;
+  --stock-pink-wash: #33202a;
+  --stock-green: #68a782;
+  --stock-green-ink: #9ddcb6;
+  --stock-green-wash: #172a20;
+  --stock-blue: #7a9fcb;
+  --stock-blue-ink: #abcdf6;
+  --stock-blue-wash: #182435;
+  --stock-red: #e0664f;
+  --stock-red-ink: #ff8f7a;
+  --stock-red-wash: #3a1b16;
+  --stock-grey: #8a8882;
+  --stock-grey-ink: #c2c0b9;
+  --stock-grey-wash: #26262a;
+
+  --chart-shop: #8a78e6;
+  --chart-quick: #23a6af;
+  --chart-neutral: #a3a8b4;
+  --chart-neutral-soft: #4a4e57;
+
+  --shadow-ticket: 0 1px 1px rgb(0 0 0 / 0.4), 0 4px 12px -2px rgb(0 0 0 / 0.5);
+  --shadow-lift: 0 2px 4px rgb(0 0 0 / 0.45), 0 14px 32px -6px rgb(0 0 0 / 0.6);
+}
+
+@theme inline {
+  --color-counter: var(--counter);
+  --color-counter-deep: var(--counter-deep);
+  --color-card: var(--card);
+  --color-card-recessed: var(--card-recessed);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-rule: var(--rule);
+  --color-rule-strong: var(--rule-strong);
+  --color-stamp: var(--stamp);
+  --color-stamp-hover: var(--stamp-hover);
+  --color-on-stamp: var(--on-stamp);
+  --color-focus: var(--focus);
+  --color-danger: var(--danger);
+  --color-danger-hover: var(--danger-hover);
+  --color-danger-wash: var(--danger-wash);
+  --color-success: var(--success);
+  --color-success-wash: var(--success-wash);
+
+  --color-canary: var(--stock-canary);
+  --color-canary-ink: var(--stock-canary-ink);
+  --color-canary-wash: var(--stock-canary-wash);
+  --color-pink: var(--stock-pink);
+  --color-pink-ink: var(--stock-pink-ink);
+  --color-pink-wash: var(--stock-pink-wash);
+  --color-green: var(--stock-green);
+  --color-green-ink: var(--stock-green-ink);
+  --color-green-wash: var(--stock-green-wash);
+  --color-blue: var(--stock-blue);
+  --color-blue-ink: var(--stock-blue-ink);
+  --color-blue-wash: var(--stock-blue-wash);
+  --color-red: var(--stock-red);
+  --color-red-ink: var(--stock-red-ink);
+  --color-red-wash: var(--stock-red-wash);
+  --color-grey: var(--stock-grey);
+  --color-grey-ink: var(--stock-grey-ink);
+  --color-grey-wash: var(--stock-grey-wash);
+
+  --font-sans: var(--font-readex), ui-sans-serif, system-ui, sans-serif;
+  --font-numerals: var(--font-martian), ui-monospace, monospace;
+
+  --shadow-ticket: var(--shadow-ticket);
+  --shadow-lift: var(--shadow-lift);
+
+  --radius-ticket: 6px;
+  --radius-control: 8px;
+}
+
+@layer base {
+  html {
+    background: var(--counter);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background: var(--counter);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-feature-settings: "kern";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    background: var(--stock-canary);
+    color: #17181b;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  input,
+  textarea,
+  select {
+    caret-color: var(--ink);
+  }
+
+  a {
+    text-underline-offset: 3px;
+  }
+
+  /* Arabic sets a touch larger and never tracked. */
+  [dir="rtl"] {
+    letter-spacing: 0 !important;
+  }
+
+  * {
+    scrollbar-color: var(--rule-strong) transparent;
+    scrollbar-width: thin;
+  }
+}
+
+@layer utilities {
+  /* Tabular numerals for every figure in a table or ticket. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Numbering-machine digits: order numbers, counts, money. */
+  .numerals {
+    font-family: var(--font-numerals);
+    font-variant-numeric: tabular-nums slashed-zero;
+    letter-spacing: -0.02em;
+  }
+
+  /* The perforation between a ticket's stub and its body. */
+  .perforation {
+    background-image: radial-gradient(circle, var(--rule-strong) 1.1px, transparent 1.4px);
+    background-size: 7px 3px;
+    background-repeat: repeat-x;
+    background-position: center;
+    height: 3px;
+  }
+
+  /*
+   * Half-circle notches where the stub tears off: two discs in the ground
+   * colour, so the ticket keeps its real shadow. Set --notch-ground when a
+   * ticket sits on something other than the counter.
+   */
+  .ticket-notched {
+    position: relative;
+    --notch-y: 35.5px;
+  }
+  .ticket-notched::before,
+  .ticket-notched::after {
+    content: "";
+    position: absolute;
+    top: calc(var(--notch-y) - 6px);
+    width: 12px;
+    height: 12px;
+    border-radius: 9999px;
+    background: var(--notch-ground, var(--counter));
+    pointer-events: none;
+    z-index: 1;
+  }
+  .ticket-notched::before {
+    inset-inline-start: -6px;
+  }
+  .ticket-notched::after {
+    inset-inline-end: -6px;
+  }
+}
+
+/*
+ * Signature: stamping a ticket tears its stub along the perforation, then the
+ * ticket travels to its next column (a named view transition per ticket).
+ */
+@keyframes stub-tear {
+  0% {
+    transform: translateY(0) rotate(0);
+  }
+  55% {
+    transform: translateY(-5px) rotate(-2.2deg);
+  }
+  100% {
+    transform: translateY(-2px) rotate(-1deg);
+  }
+}
+
+@keyframes stamp-press {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(0.96);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.ticket-tearing .ticket-stub {
+  transform-origin: 100% 100%;
+  animation: stub-tear 180ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+[dir="rtl"] .ticket-tearing .ticket-stub {
+  transform-origin: 0 100%;
+}
+.ticket-tearing .perforation {
+  opacity: 0.35;
+  transition: opacity 180ms ease-out;
+}
+
+::view-transition-group(.ticket-move) {
+  animation-duration: 180ms;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 180ms;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    transition-duration: 1ms !important;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Directional icons (arrows, chevrons) mirror in Arabic. */
+[dir="rtl"] .flip-rtl {
+  transform: scaleX(-1);
+}
+
+/*
+ * Scroll containers are positioning contexts, so absolutely positioned
+ * descendants (screen-reader-only labels) stay inside the clip instead of
+ * widening the page.
+ */
+.overflow-x-auto,
+.overflow-y-auto,
+.overflow-auto {
+  position: relative;
+}
+
+/*
+ * The rack sizes its columns so a whole number always fits the viewport:
+ * no ticket is ever cut mid-card. --fit grows with the rack's width;
+ * --count is how many stages have tickets.
+ */
+.board-root {
+  container-type: inline-size;
+}
+.rack-col {
+  --fit: 1;
+  --n: min(var(--fit), var(--count, 1));
+  width: 100%;
+}
+@container (min-width: 44rem) {
+  .rack-col {
+    --fit: 2;
+    width: min(28rem, calc((100cqw - (var(--n) - 1) * 1rem) / var(--n)));
+  }
+}
+@container (min-width: 60rem) {
+  .rack-col {
+    --fit: 3;
+  }
+}
+@container (min-width: 70rem) {
+  .rack-col {
+    --fit: 4;
+  }
+}
+@container (min-width: 88rem) {
+  .rack-col {
+    --fit: 5;
+  }
+}
