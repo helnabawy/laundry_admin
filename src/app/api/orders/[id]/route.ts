@@ -1,8 +1,9 @@
 import { handle, langOf, mobileUser } from "@/server/api/http";
-import { customerOrderResponse } from "../load";
+import { visibleOrderResponse } from "../load";
 
+// The customer's own order, or a task assigned to the calling driver.
 export const GET = handle(async (req, ctx: RouteContext<"/api/orders/[id]">) => {
   const me = await mobileUser(req);
   const { id } = await ctx.params;
-  return customerOrderResponse(langOf(req), me.id, id);
+  return visibleOrderResponse(langOf(req), me, id);
 });

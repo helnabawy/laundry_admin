@@ -22,8 +22,8 @@ pnpm dev                     # http://localhost:3000
 
 | Portal login           | Password       | Role                                    |
 | ---------------------- | -------------- | --------------------------------------- |
-| super@laundry.local    | `ChangeMe123!` | Super admin: every laundry, reports, audit |
-| admin@laundry.local    | `ChangeMe123!` | Admin: runs the laundry                 |
+| super@laundry.local    | `ChangeMe123!` | Super admin: every laundry, staff accounts, reports, audit |
+| admin@laundry.local    | `ChangeMe123!` | Admin: runs the laundry (no staff management) |
 | operator@laundry.local | `ChangeMe123!` | User: works orders                      |
 
 Mobile accounts use OTP `1234` while `DEV_OTP_CODE` is set:
@@ -46,7 +46,8 @@ flutter run --dart-define=USE_MOCK_API=false --dart-define=API_BASE_URL=http://l
 | Orders: assign drivers, receive items, count & invoice, dispatch | ✓ | ✓ | ✓ |
 | Cancel an order                                          | ✓ | ✓ | – |
 | Services, items, service levels, time slots              | ✓ | ✓ | – |
-| Drivers and staff                                        | ✓ | ✓ | – |
+| Drivers                                                  | ✓ | ✓ | – |
+| Staff accounts (portal users)                            | ✓ | – | – |
 | Reports and export, laundries, audit log                 | ✓ | – | – |
 
 The matrix is defined in `src/lib/permissions.ts`. Server actions check it, and so do pages.

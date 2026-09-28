@@ -18,7 +18,8 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:seed:demo": "tsx prisma/seed.ts --demo",
     "db:reset": "prisma migrate reset --force && tsx prisma/seed.ts --demo",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "staff": "tsx --conditions=react-server scripts/staff.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",

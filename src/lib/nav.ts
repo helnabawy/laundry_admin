@@ -33,13 +33,13 @@ export const NAV_SECTIONS: { label: string; items: NavItem[] }[] = [
     items: [
       { href: "/catalogue", label: "catalogue", icon: "catalogue", capability: "catalogue.manage" },
       { href: "/drivers", label: "drivers", icon: "drivers", capability: "drivers.manage" },
-      { href: "/staff", label: "staff", icon: "staff", capability: "staff.manage" },
     ],
   },
   {
     label: "sectionPlatform",
     items: [
       { href: "/reports", label: "reports", icon: "reports", capability: "reports.view" },
+      { href: "/staff", label: "staff", icon: "staff", capability: "staff.manage" },
       { href: "/vendors", label: "vendors", icon: "vendors", capability: "vendors.manage" },
       { href: "/audit", label: "audit", icon: "audit", capability: "audit.view" },
     ],

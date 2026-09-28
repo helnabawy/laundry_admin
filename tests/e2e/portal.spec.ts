@@ -13,10 +13,14 @@ test("navigation follows the role", async ({ page }) => {
   await staffLogin(page, "admin@laundry.local");
   await expect(nav.getByRole("link", { name: "Services & prices" })).toBeVisible();
   await expect(nav.getByRole("link", { name: "Reports" })).toHaveCount(0);
+  await expect(nav.getByRole("link", { name: "Staff" })).toHaveCount(0);
+  await page.goto("/staff");
+  await expect(page).toHaveURL(/\/dashboard/);
 
   await staffLogin(page, "super@laundry.local");
   await expect(nav.getByRole("link", { name: "Reports" })).toBeVisible();
   await expect(nav.getByRole("link", { name: "Audit log" })).toBeVisible();
+  await expect(nav.getByRole("link", { name: "Staff" })).toBeVisible();
 });
 
 test("an admin adds a bilingual service with an icon, and the app sees it", async ({ page, request }) => {

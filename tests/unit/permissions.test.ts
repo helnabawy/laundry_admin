@@ -16,14 +16,17 @@ describe("permissions", () => {
     expect(can("USER", "staff.manage")).toBe(false);
   });
 
-  it("admins manage their laundry but not vendors", () => {
+  it("admins manage their laundry but not vendors or staff", () => {
     expect(can("ADMIN", "catalogue.manage")).toBe(true);
     expect(can("ADMIN", "drivers.manage")).toBe(true);
     expect(can("ADMIN", "vendors.manage")).toBe(false);
+    expect(can("ADMIN", "staff.manage")).toBe(false);
   });
 
-  it("admins can't mint super admins", () => {
-    expect(manageableRoles("ADMIN")).toEqual(["ADMIN", "USER"]);
+  it("only the super admin manages staff accounts", () => {
+    expect(can("SUPER_ADMIN", "staff.manage")).toBe(true);
+    expect(manageableRoles("SUPER_ADMIN")).toEqual(["SUPER_ADMIN", "ADMIN", "USER"]);
+    expect(manageableRoles("ADMIN")).toEqual([]);
     expect(manageableRoles("USER")).toEqual([]);
   });
 });

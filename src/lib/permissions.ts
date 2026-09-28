@@ -2,8 +2,9 @@
  * Portal roles and what each may do. Pure, so both server checks and the
  * client navigation read the same matrix.
  *
- * - SUPER_ADMIN — platform operator: every vendor, reports, audit log.
- * - ADMIN       — runs one laundry: catalogue, drivers, staff, orders.
+ * - SUPER_ADMIN — platform operator: every vendor, staff accounts, reports,
+ *                 audit log.
+ * - ADMIN       — runs one laundry: catalogue, drivers, orders.
  * - USER        — laundry operator: works orders day to day.
  */
 
@@ -43,7 +44,6 @@ const MATRIX: Record<StaffRole, readonly Capability[]> = {
     "orders.cancel",
     "catalogue.manage",
     "drivers.manage",
-    "staff.manage",
   ],
   USER: ["dashboard.view", "orders.view", "orders.operate"],
 };
@@ -55,7 +55,6 @@ export function can(role: StaffRole, capability: Capability): boolean {
 /** Roles a user of `role` may create or edit. */
 export function manageableRoles(role: StaffRole): StaffRole[] {
   if (role === "SUPER_ADMIN") return ["SUPER_ADMIN", "ADMIN", "USER"];
-  if (role === "ADMIN") return ["ADMIN", "USER"];
   return [];
 }
 

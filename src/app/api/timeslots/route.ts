@@ -11,7 +11,10 @@ export const GET = handle(async (req) => {
   if (!isIsoDate(date)) throw badRequest("date must be YYYY-MM-DD");
   const type = params.get("type") === "delivery" ? "delivery" : "pickup";
   const notBeforeRaw = params.get("notBefore");
-  const notBefore = notBeforeRaw ? new Date(notBeforeRaw) : undefined;
+  // A timestamp without an offset (Dart's local `toIso8601String()`) is UAE
+  // local time, not the server's zone.
+  const hasOffset = notBeforeRaw ? /(Z|[+-]\d{2}:?\d{2})$/i.test(notBeforeRaw) : true;
+  const notBefore = notBeforeRaw ? new Date(hasOffset ? notBeforeRaw : `${notBeforeRaw}+04:00`) : undefined;
   if (notBefore && Number.isNaN(notBefore.getTime())) throw badRequest("notBefore must be an ISO date");
 
   const vendor = await defaultVendor();
