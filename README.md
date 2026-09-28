@@ -46,7 +46,7 @@ flutter run --dart-define=USE_MOCK_API=false --dart-define=API_BASE_URL=http://l
 | Orders: assign drivers, receive items, count & invoice, dispatch | ✓ | ✓ | ✓ |
 | Cancel an order                                          | ✓ | ✓ | – |
 | Services, items, service levels, time slots              | ✓ | ✓ | – |
-| Drivers                                                  | ✓ | ✓ | – |
+| Drivers page (add/edit a laundry's drivers)              | – | ✓ | – |
 | Staff accounts (portal users)                            | ✓ | – | – |
 | Reports and export, laundries, audit log                 | ✓ | – | – |
 

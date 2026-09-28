@@ -20,6 +20,8 @@ test("navigation follows the role", async ({ page }) => {
   await staffLogin(page, "super@laundry.local");
   await expect(nav.getByRole("link", { name: "Reports" })).toBeVisible();
   await expect(nav.getByRole("link", { name: "Audit log" })).toBeVisible();
+  await expect(nav.getByRole("link", { name: "Drivers" })).toHaveCount(0);
+  await expect(nav.getByRole("link", { name: "Users" })).toBeVisible();
   await expect(nav.getByRole("link", { name: "Staff" })).toBeVisible();
 });
 

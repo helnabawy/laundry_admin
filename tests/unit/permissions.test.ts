@@ -9,6 +9,12 @@ describe("permissions", () => {
     expect(can("ADMIN", "audit.view")).toBe(false);
   });
 
+  it("the Drivers page belongs to laundry admins, not the super admin", () => {
+    expect(can("ADMIN", "drivers.manage")).toBe(true);
+    expect(can("SUPER_ADMIN", "drivers.manage")).toBe(false);
+    expect(can("USER", "drivers.manage")).toBe(false);
+  });
+
   it("app users are managed by admins and the super admin, not operators", () => {
     expect(can("SUPER_ADMIN", "customers.manage")).toBe(true);
     expect(can("ADMIN", "customers.manage")).toBe(true);
