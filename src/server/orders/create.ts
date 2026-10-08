@@ -4,6 +4,7 @@ import { db } from "@/server/db";
 import { invoiceTotals } from "@/domain/pricing";
 import { resolveSlot } from "@/server/slots";
 import { address as serializeAddress } from "@/server/api/serializers";
+import { assertMethodAvailable, startPayment } from "@/server/payments/service";
 import { DomainError, recordStatus, type OrderRow } from "./transition";
 
 export const newOrderSchema = z.object({
@@ -14,7 +15,7 @@ export const newOrderSchema = z.object({
     .array(z.object({ productId: z.string(), quantity: z.number().int() }))
     .default([]),
   tierId: z.string(),
-  paymentMethod: z.enum(["card", "cashOnDelivery"]).nullish(),
+  paymentMethod: z.enum(["card", "cashOnDelivery", "payLater"]).nullish(),
   pickupSlotId: z.string(),
   deliverySlotId: z.string(),
   addressId: z.string(),
@@ -33,6 +34,25 @@ export type NewOrder = z.infer<typeof newOrderSchema>;
  * portal.
  */
 export async function createOrder(input: {
+  vendorId: string;
+  customerId: string;
+  params: NewOrder;
+}): Promise<string> {
+  const orderId = await insertOrder(input);
+  const method = input.params.items.length > 0 ? input.params.paymentMethod : null;
+  if (method === "card" || method === "payLater") {
+    // The order exists either way; if opening the checkout fails the customer
+    // retries payment from the order screen.
+    try {
+      await startPayment(orderId, method);
+    } catch (error) {
+      console.error("[payments] could not open checkout for", orderId, error);
+    }
+  }
+  return orderId;
+}
+
+async function insertOrder(input: {
   vendorId: string;
   customerId: string;
   params: NewOrder;
@@ -166,16 +186,15 @@ export async function createOrder(input: {
         paymentMethod: params.paymentMethod,
         vendorCodFee: Number(vendor.codFee),
       });
-      const paid = params.paymentMethod === "card";
+      await assertMethodAvailable(tx, vendor, params.paymentMethod!, totals.total);
+      // Card / pay-later are settled through a hosted checkout opened right
+      // after this commits; cash is collected by the driver on delivery.
       await tx.invoice.create({
         data: {
           orderId: order.id,
           number: `${vendor.invoicePrefix}-${number}`,
           paymentMethod: params.paymentMethod,
-          // Card is simulated as an instant successful charge (no gateway
-          // yet); cash is collected by the driver on delivery.
-          paid,
-          paidAt: paid ? new Date() : null,
+          paid: false,
           vipSurcharge: totals.vipSurcharge,
           codFee: totals.codFee,
           items: {

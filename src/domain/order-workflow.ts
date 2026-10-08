@@ -81,6 +81,7 @@ export type TransitionId =
   | "receiveFromDriver"
   | "issueInvoice"
   | "choosePaymentMethod"
+  | "confirmOnlinePayment"
   | "markCleaned"
   | "confirmDelivery"
   | "reportDeliveryFailed"
@@ -136,8 +137,16 @@ export const TRANSITIONS: Record<TransitionId, TransitionRule> = {
     kinds: ["WIZARD"],
     to: () => "awaitingPayment",
   },
+  // Cash on delivery: the customer's choice alone starts the cleaning.
   choosePaymentMethod: {
     actor: "customer",
+    from: ["awaitingPayment"],
+    kinds: ["WIZARD"],
+    to: () => "processing",
+  },
+  // Card / pay-later: the payment gateway confirming the charge does.
+  confirmOnlinePayment: {
+    actor: "system",
     from: ["awaitingPayment"],
     kinds: ["WIZARD"],
     to: () => "processing",

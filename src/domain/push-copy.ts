@@ -26,6 +26,9 @@ const EN: Record<string, Copy> = {
   cancelled: { title: "Order cancelled", body: (n) => `Order ${n} was cancelled.` },
   newPickup: { title: "New pickup", body: (n) => `Order ${n} was added to your pickups.` },
   newDelivery: { title: "New delivery", body: (n) => `Order ${n} is ready to deliver.` },
+  paymentReceived: { title: "Payment received", body: (n) => `Thanks — the payment for order ${n} went through.` },
+  paymentFailed: { title: "Payment didn't go through", body: (n) => `The payment for order ${n} was declined. Open the order to try again.` },
+  refundIssued: { title: "Refund issued", body: (n) => `A refund for order ${n} is on its way to you.` },
   update: { title: "Order update", body: (n) => `Order ${n} has a new status.` },
 };
 
@@ -41,6 +44,9 @@ const AR: Record<string, Copy> = {
   cancelled: { title: "تم إلغاء الطلب", body: (n) => `تم إلغاء الطلب ${n}.` },
   newPickup: { title: "استلام جديد", body: (n) => `أُضيف الطلب ${n} إلى مهام الاستلام.` },
   newDelivery: { title: "تسليم جديد", body: (n) => `الطلب ${n} جاهز للتسليم.` },
+  paymentReceived: { title: "تم استلام الدفعة", body: (n) => `شكرًا، تمت دفعة الطلب ${n} بنجاح.` },
+  paymentFailed: { title: "لم تتم الدفعة", body: (n) => `تم رفض دفعة الطلب ${n}. افتح الطلب وحاول مرة أخرى.` },
+  refundIssued: { title: "تم الاسترداد", body: (n) => `تم إصدار استرداد للطلب ${n} وهو في الطريق إليك.` },
   update: { title: "تحديث على الطلب", body: (n) => `للطلب ${n} حالة جديدة.` },
 };
 

@@ -27,7 +27,7 @@ export interface TicketView {
   deliveryDriver: string | null;
   total: number | null;
   paid: boolean | null;
-  paymentMethod: "card" | "cashOnDelivery" | null;
+  paymentMethod: "card" | "cashOnDelivery" | "payLater" | null;
   itemCount: number;
   vendorId: string;
   vendorName: { en: string; ar: string };
@@ -111,7 +111,7 @@ export function orderWhere(
   f: Omit<OrderFilters, "page"> & {
     tierId?: string;
     driverId?: string;
-    paymentMethod?: "card" | "cashOnDelivery" | "none";
+    paymentMethod?: "card" | "cashOnDelivery" | "payLater" | "none";
     paid?: boolean;
     categoryId?: string;
   },

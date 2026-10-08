@@ -18,7 +18,10 @@ export type CustomerNotificationKind =
   | "delivered"
   | "pickupFailed"
   | "deliveryFailed"
-  | "cancelled";
+  | "cancelled"
+  | "paymentReceived"
+  | "paymentFailed"
+  | "refundIssued";
 
 export type DriverNotificationKind = "newPickup" | "newDelivery";
 
@@ -31,6 +34,9 @@ export const STAFF_NOTIFICATION_KINDS = [
   "delivered",
   "cancelled",
   "orderRated",
+  "paymentReceived",
+  "paymentFailed",
+  "refundIssued",
 ] as const;
 
 export type StaffNotificationKind = (typeof STAFF_NOTIFICATION_KINDS)[number];

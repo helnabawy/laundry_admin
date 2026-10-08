@@ -44,3 +44,21 @@ export async function pickSlots(request: APIRequestContext, tierId: string, hour
   }
   throw new Error("No delivery slot found");
 }
+
+/**
+ * Plays the payment provider: sends the signed webhook the mock gateway
+ * expects (dev secret unless PAYMENT_WEBHOOK_SECRET is set for the server).
+ */
+export async function gatewayWebhook(
+  request: APIRequestContext,
+  payment: { provider: string; reference: string },
+  event: "succeeded" | "failed" | "cancelled",
+) {
+  const { createHmac } = await import("node:crypto");
+  const body = JSON.stringify({ provider: payment.provider, reference: payment.reference, event, at: new Date().toISOString() });
+  const signature = createHmac("sha256", process.env.PAYMENT_WEBHOOK_SECRET ?? "dev-payment-webhook-secret").update(body).digest("hex");
+  return request.post(`/api/payments/webhooks/${payment.provider}`, {
+    headers: { "content-type": "application/json", "x-mock-signature": signature },
+    data: body,
+  });
+}

@@ -11,7 +11,7 @@ export interface ReportFilters {
   vendorId?: string;
   status?: OrderStatus | "active" | "done";
   kind?: OrderKind;
-  paymentMethod?: "card" | "cashOnDelivery" | "none";
+  paymentMethod?: "card" | "cashOnDelivery" | "payLater" | "none";
   paid?: boolean;
   tierId?: string;
   driverId?: string;

@@ -2,6 +2,7 @@ import "server-only";
 import { z } from "zod";
 import { db } from "@/server/db";
 import { invoiceTotals, round2 } from "@/domain/pricing";
+import { assertDispatchable } from "@/server/payments/service";
 import {
   audit,
   DomainError,
@@ -56,6 +57,7 @@ export async function assignPickupDriver(
     actor: actorRef(staff),
     guard: vendorGuard(staff),
     apply: async (tx, o) => {
+      await assertDispatchable(tx, o);
       await requireDriver(tx, o.vendorId, driverId);
       return { pickupDriverId: driverId };
     },

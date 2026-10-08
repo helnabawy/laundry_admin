@@ -34,6 +34,8 @@ model Vendor {
   codFee        Decimal  @default(5) @db.Decimal(10, 2)
   /// Last order number issued; the next order takes `orderSeq + 1`.
   orderSeq      Int      @default(1041)
+  /// Gateway that takes card payments for this laundry.
+  cardProvider  PaymentProvider @default(networkIntl)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -45,6 +47,10 @@ model Vendor {
   slotWindows   SlotWindow[]
   orders        Order[]
   notifications Notification[]
+  gateways      VendorGateway[]
+  payments      Payment[]
+  refunds       Refund[]
+  expenses      Expense[]
 }
 
 // ---- People ---------------------------------------------------------------
@@ -290,6 +296,8 @@ enum OrderStatus {
 enum PaymentMethod {
   card
   cashOnDelivery
+  /// Buy now, pay later in installments (Tabby).
+  payLater
 }
 
 model Order {
@@ -328,6 +336,7 @@ model Order {
   rating        OrderRating?
   notifications Notification[]
   supportRequests SupportRequest[]
+  payments        Payment[]
 
   @@unique([vendorId, number])
   @@index([vendorId, status])
@@ -388,6 +397,7 @@ model Invoice {
 
   items      InvoiceItem[]
   conditions ItemCondition[]
+  payments   Payment[]
 }
 
 model InvoiceItem {
@@ -459,6 +469,127 @@ model ProofOfDelivery {
   orderId   String   @unique
   photoUrl  String
   createdAt DateTime @default(now())
+}
+
+// ---- Payments & finance --------------------------------------------------
+
+/// Who moves the money. `cash` is the driver collecting on delivery.
+enum PaymentProvider {
+  networkIntl
+  telr
+  tabby
+  cash
+}
+
+enum PaymentStatus {
+  pending
+  succeeded
+  failed
+  cancelled
+  expired
+  partiallyRefunded
+  refunded
+}
+
+/// A laundry's settings for one provider. Fees are what the provider keeps
+/// per successful payment: `amount * feePercent / 100 + feeFixed`.
+model VendorGateway {
+  vendorId   String
+  vendor     Vendor          @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  provider   PaymentProvider
+  isEnabled  Boolean         @default(true)
+  feePercent Decimal         @default(0) @db.Decimal(5, 2)
+  feeFixed   Decimal         @default(0) @db.Decimal(10, 2)
+  /// Order totals this provider accepts (e.g. Tabby has a minimum).
+  minAmount  Decimal?        @db.Decimal(10, 2)
+  maxAmount  Decimal?        @db.Decimal(10, 2)
+  updatedAt  DateTime        @updatedAt
+
+  @@id([vendorId, provider])
+}
+
+/// One payment attempt or cash collection. The ledger every finance report
+/// reads; `Invoice.paid` is kept in sync when a payment succeeds.
+model Payment {
+  id            String          @id @default(cuid())
+  vendorId      String
+  vendor        Vendor          @relation(fields: [vendorId], references: [id])
+  orderId       String
+  order         Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  invoiceId     String
+  invoice       Invoice         @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  provider      PaymentProvider
+  method        PaymentMethod
+  status        PaymentStatus   @default(pending)
+  amount        Decimal         @db.Decimal(10, 2)
+  currency      String          @default("AED")
+  /// What the provider keeps, snapshotted when the payment succeeds.
+  feeAmount     Decimal         @default(0) @db.Decimal(10, 2)
+  providerRef   String?
+  /// Random secret in the hosted checkout URL.
+  checkoutToken String          @unique
+  checkoutUrl   String?
+  failureReason String?
+  /// The driver who collected a cash payment.
+  collectedById String?
+  /// Raw gateway events, newest last.
+  events        Json            @default("[]")
+  paidAt        DateTime?
+  expiresAt     DateTime?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  refunds Refund[]
+
+  @@unique([provider, providerRef])
+  @@index([vendorId, paidAt])
+  @@index([vendorId, status, createdAt])
+  @@index([orderId])
+}
+
+model Refund {
+  id          String    @id @default(cuid())
+  paymentId   String
+  payment     Payment   @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  vendorId    String
+  vendor      Vendor    @relation(fields: [vendorId], references: [id])
+  amount      Decimal   @db.Decimal(10, 2)
+  reason      String
+  providerRef String?
+  createdById String?
+  createdAt   DateTime  @default(now())
+
+  @@index([vendorId, createdAt])
+  @@index([paymentId])
+}
+
+enum ExpenseCategory {
+  rent
+  salaries
+  utilities
+  supplies
+  fuel
+  maintenance
+  marketing
+  other
+}
+
+/// An operating cost the owner records, so the portal can show profit.
+model Expense {
+  id          String          @id @default(cuid())
+  vendorId    String
+  vendor      Vendor          @relation(fields: [vendorId], references: [id])
+  category    ExpenseCategory
+  amount      Decimal         @db.Decimal(10, 2)
+  /// Local (Asia/Dubai) calendar day the cost belongs to.
+  incurredOn  DateTime        @db.Date
+  description String          @default("")
+  createdById String?
+  deletedAt   DateTime?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([vendorId, incurredOn])
 }
 
 // ---- Notifications --------------------------------------------------------

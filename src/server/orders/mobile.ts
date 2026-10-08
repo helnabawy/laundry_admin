@@ -1,6 +1,20 @@
 import "server-only";
 import { db } from "@/server/db";
-import { DomainError, transitionOrder, type OrderRow } from "./transition";
+import { canTransition, TransitionError } from "@/domain/order-workflow";
+import type { PaymentMethod } from "@/domain/pricing";
+import {
+  assertMethodAvailable,
+  invoiceWithItems,
+  recordCashCollection,
+  startPayment,
+} from "@/server/payments/service";
+import {
+  DomainError,
+  lockOrder,
+  transitionOrder,
+  type OrderRow,
+  type Tx,
+} from "./transition";
 
 /**
  * Customer and driver actions from the mobile app. Ownership is checked
@@ -29,44 +43,79 @@ function deliveryTaskOf(driverId: string) {
 
 // ---- Customer ---------------------------------------------------------------
 
+/**
+ * The customer picks how to pay a wizard invoice.
+ *
+ * Cash on delivery settles the choice on the spot (cleaning starts, the
+ * driver collects later). Card / pay-later open a hosted checkout and the
+ * order stays `awaitingPayment` until the gateway confirms the charge (see
+ * `handleGatewayEvent`). Returns the checkout to send the customer to.
+ */
 export async function choosePaymentMethod(
   customerId: string,
   orderId: string,
-  method: "card" | "cashOnDelivery",
+  method: PaymentMethod,
   conditionsAcknowledged: boolean,
 ) {
-  return transitionOrder({
-    orderId,
-    transition: "choosePaymentMethod",
-    actor: { type: "customer", id: customerId },
-    guard: ownedByCustomer(customerId),
-    apply: async (tx, o) => {
-      const [invoice, vendor] = await Promise.all([
-        tx.invoice.findUnique({
-          where: { orderId: o.id },
-          include: { _count: { select: { conditions: true } } },
-        }),
-        tx.vendor.findUniqueOrThrow({ where: { id: o.vendorId } }),
-      ]);
-      if (!invoice) throw new DomainError("The invoice isn't ready yet");
-      if (invoice._count.conditions > 0 && !conditionsAcknowledged) {
-        throw new DomainError("Condition report must be acknowledged first");
-      }
-      const paid = method === "card";
-      await tx.invoice.update({
-        where: { id: invoice.id },
-        data: {
-          paymentMethod: method,
-          conditionsAcknowledged: conditionsAcknowledged || invoice._count.conditions === 0,
-          // Cash on delivery carries the vendor's flat handling fee.
-          codFee: method === "cashOnDelivery" ? vendor.codFee : 0,
-          // Card is simulated as an instant successful charge (no gateway yet).
-          paid,
-          paidAt: paid ? new Date() : null,
-        },
-      });
-    },
+  if (method === "cashOnDelivery") {
+    await transitionOrder({
+      orderId,
+      transition: "choosePaymentMethod",
+      actor: { type: "customer", id: customerId },
+      guard: ownedByCustomer(customerId),
+      apply: async (tx, o) => {
+        const [invoice, vendor] = await Promise.all([
+          readyInvoice(tx, o.id, conditionsAcknowledged),
+          tx.vendor.findUniqueOrThrow({ where: { id: o.vendorId } }),
+        ]);
+        await assertMethodAvailable(tx, vendor, "cashOnDelivery", 0);
+        await tx.invoice.update({
+          where: { id: invoice.id },
+          data: {
+            paymentMethod: method,
+            conditionsAcknowledged: true,
+            // Cash on delivery carries the vendor's flat handling fee.
+            codFee: vendor.codFee,
+            paid: false,
+            paidAt: null,
+          },
+        });
+        // A card checkout the customer abandoned no longer applies.
+        await tx.payment.updateMany({
+          where: { invoiceId: invoice.id, status: "pending" },
+          data: { status: "cancelled", failureReason: "Switched to cash on delivery" },
+        });
+      },
+    });
+    return null;
+  }
+
+  await db.$transaction(async (tx) => {
+    const o = await lockOrder(tx, orderId);
+    ownedByCustomer(customerId)(o);
+    if (!canTransition("confirmOnlinePayment", o)) {
+      throw new TransitionError("choosePaymentMethod", o.status, o.kind);
+    }
+    const invoice = await readyInvoice(tx, o.id, conditionsAcknowledged);
+    await tx.invoice.update({
+      where: { id: invoice.id },
+      data: { paymentMethod: method, conditionsAcknowledged: true, codFee: 0 },
+    });
   });
+  return startPayment(orderId, method);
+}
+
+async function readyInvoice(tx: Tx, orderId: string, conditionsAcknowledged: boolean) {
+  const invoice = await tx.invoice.findUnique({
+    where: { orderId },
+    include: { _count: { select: { conditions: true } } },
+  });
+  if (!invoice) throw new DomainError("The invoice isn't ready yet");
+  if (invoice.paid) throw new DomainError("This order is already paid");
+  if (invoice._count.conditions > 0 && !conditionsAcknowledged) {
+    throw new DomainError("Condition report must be acknowledged first");
+  }
+  return invoice;
 }
 
 export async function rateOrder(
@@ -153,15 +202,15 @@ export async function confirmDelivery(
     actor: { type: "driver", id: driverId },
     guard: deliveryTaskOf(driverId),
     apply: async (tx, o) => {
-      const invoice = await tx.invoice.findUnique({ where: { orderId: o.id } });
+      const invoice = await tx.invoice.findUnique({
+        where: { orderId: o.id },
+        include: invoiceWithItems,
+      });
       if (invoice && invoice.paymentMethod === "cashOnDelivery" && !invoice.paid) {
         if (!input.cashCollected) {
           throw new DomainError("Cash must be collected before confirming delivery");
         }
-        await tx.invoice.update({
-          where: { id: invoice.id },
-          data: { paid: true, paidAt: new Date() },
-        });
+        await recordCashCollection(tx, invoice, o, driverId);
       }
       if (input.photoUrl) {
         await tx.proofOfDelivery.upsert({

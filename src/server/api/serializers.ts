@@ -1,6 +1,8 @@
 import "server-only";
 import type { Prisma } from "@/generated/prisma/client";
 import { tr, type Lang } from "./http";
+import { round2 } from "@/domain/pricing";
+import { amountDue } from "@/server/payments/service";
 
 /**
  * JSON shapes the Flutter app's `*Model.fromJson` expect. Field names here are
@@ -197,6 +199,10 @@ export const orderInclude = {
     include: {
       items: { orderBy: { sortOrder: "asc" } },
       conditions: true,
+      payments: {
+        orderBy: { createdAt: "asc" },
+        include: { refunds: { select: { amount: true } } },
+      },
     },
   },
   failures: { orderBy: { createdAt: "desc" }, take: 1 },
@@ -234,6 +240,40 @@ export function invoice(lang: Lang, inv: NonNullable<FullOrder["invoice"]>) {
     vipSurcharge: num(inv.vipSurcharge),
     codFee: num(inv.codFee),
     paid: inv.paid,
+    paidAt: inv.paidAt?.toISOString() ?? null,
+    total: amountDue(inv),
+    amountRefunded: round2(
+      inv.payments.reduce((sum, p) => sum + p.refunds.reduce((s, r) => s + Number(r.amount), 0), 0),
+    ),
+    // The latest attempt: what the app shows (pending checkout, declined…).
+    payment: inv.payments.length ? payment(inv.payments[inv.payments.length - 1]) : null,
+  };
+}
+
+export function payment(p: {
+  id: string;
+  status: string;
+  provider: string;
+  method: string;
+  amount: Prisma.Decimal;
+  providerRef: string | null;
+  checkoutUrl: string | null;
+  failureReason: string | null;
+  paidAt: Date | null;
+  expiresAt: Date | null;
+}) {
+  const stale = p.status === "pending" && p.expiresAt != null && p.expiresAt <= new Date();
+  return {
+    id: p.id,
+    status: stale ? "expired" : p.status,
+    provider: p.provider,
+    method: p.method,
+    amount: num(p.amount),
+    // The provider's transaction reference, as printed on the customer's receipt.
+    reference: p.providerRef,
+    checkoutUrl: p.status === "pending" && !stale ? p.checkoutUrl : null,
+    failureReason: p.failureReason,
+    paidAt: p.paidAt?.toISOString() ?? null,
   };
 }
 

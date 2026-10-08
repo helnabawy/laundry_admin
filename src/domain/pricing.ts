@@ -7,7 +7,7 @@
  */
 
 export type SurchargeType = "none" | "flat" | "percentage";
-export type PaymentMethod = "card" | "cashOnDelivery";
+export type PaymentMethod = "card" | "cashOnDelivery" | "payLater";
 
 export function round2(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100;

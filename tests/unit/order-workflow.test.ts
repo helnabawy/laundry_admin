@@ -75,6 +75,19 @@ describe("order workflow", () => {
     ).toThrow(TransitionError);
   });
 
+  it("only the payment gateway (system) confirms an online payment, wizard orders only", () => {
+    expect(
+      resolveTransition("confirmOnlinePayment", { status: "awaitingPayment", kind: "WIZARD" }, "system"),
+    ).toBe("processing");
+    expect(() =>
+      resolveTransition("confirmOnlinePayment", { status: "awaitingPayment", kind: "WIZARD" }, "customer"),
+    ).toThrow(TransitionError);
+    expect(() =>
+      resolveTransition("confirmOnlinePayment", { status: "pending", kind: "SHOP" }, "system"),
+    ).toThrow(TransitionError);
+    expect(staffActions({ status: "awaitingPayment", kind: "WIZARD" })).not.toContain("confirmOnlinePayment");
+  });
+
   it("rejects every transition from a status it doesn't list", () => {
     for (const [id, rule] of Object.entries(TRANSITIONS) as [TransitionId, (typeof TRANSITIONS)[TransitionId]][]) {
       for (const kind of KINDS) {

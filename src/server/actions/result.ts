@@ -21,6 +21,8 @@ const KNOWN: Record<string, string> = {
   "Add at least one item": "itemsRequired",
   "Pick a laundry first": "pickLaundry",
   "Laundry not found": "laundryNotFound",
+  "Awaiting online payment": "awaitingOnlinePayment",
+  "Payment not found": "paymentNotFound",
 };
 
 /**

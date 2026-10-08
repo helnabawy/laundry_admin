@@ -9,7 +9,7 @@ export const POST = handle(async (req, ctx: RouteContext<"/api/orders/[id]/payme
   const body = await readJson(
     req,
     z.object({
-      method: z.enum(["card", "cashOnDelivery"]),
+      method: z.enum(["card", "cashOnDelivery", "payLater"]),
       conditionsAcknowledged: z.boolean().default(false),
     }),
   );

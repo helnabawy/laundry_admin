@@ -357,6 +357,18 @@
       "orderRated": {
         "title": "New rating",
         "body": "The customer rated order {number}"
+      },
+      "paymentReceived": {
+        "title": "Payment received",
+        "body": "Order {number} was paid online"
+      },
+      "paymentFailed": {
+        "title": "Payment declined",
+        "body": "The online payment for order {number} didn't go through"
+      },
+      "refundIssued": {
+        "title": "Refund issued",
+        "body": "A refund was issued on order {number}"
       }
     }
   },
@@ -382,7 +394,9 @@
     "cannotDeactivateSelf": "You can't switch off your own account.",
     "inUse": "This is used by existing orders, so it can only be hidden, not deleted.",
     "pickLaundry": "Pick a laundry in the top bar first, then try again.",
-    "laundryNotFound": "That laundry isn't accepting orders."
+    "laundryNotFound": "That laundry isn't accepting orders.",
+    "awaitingOnlinePayment": "This order is waiting for its online payment. Assign a driver once it's paid.",
+    "paymentNotFound": "This payment no longer exists or belongs to another laundry."
   },
   "dashboard": {
     "title": "Dashboard",
@@ -699,5 +713,21 @@
     "allLaundries": "Any laundry",
     "stops": "Stops",
     "recentStops": "Recent pickups and deliveries"
+  },
+  "pay": {
+    "title": "Secure checkout",
+    "testMode": "Test mode",
+    "payingTo": "{vendor} · order {number}",
+    "installments": "4 interest-free payments of {amount}",
+    "tabbyAccount": "Test shopper · +971 50 000 0000",
+    "payNow": "Pay {amount}",
+    "decline": "Simulate decline",
+    "cancel": "Cancel",
+    "mockNote": "This is a simulated payment page. No real money moves.",
+    "successTitle": "Payment complete",
+    "failedTitle": "Payment declined",
+    "cancelledTitle": "Payment cancelled",
+    "expiredTitle": "This checkout expired",
+    "returnToApp": "You can close this page and return to the app."
   }
 }

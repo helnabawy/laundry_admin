@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { auth, CUSTOMER, DRIVER, DRIVER_NAME, mobileLogin, pickSlots, staffLogin } from "./helpers";
+import { auth, CUSTOMER, DRIVER, DRIVER_NAME, gatewayWebhook, mobileLogin, pickSlots, staffLogin } from "./helpers";
 
 test.describe.configure({ mode: "serial" });
 
@@ -122,9 +122,12 @@ test("shop order skips inspection: receiving starts cleaning", async ({ page, re
     },
   });
   const order = await created.json();
-  // 3×10 + 45 = 75, VIP 15% = 11.25, card → no COD fee, paid.
-  expect(order.invoice).toMatchObject({ vipSurcharge: 11.25, codFee: 0, paid: true });
+  // 3×10 + 45 = 75, VIP 15% = 11.25, card → no COD fee; paid once the
+  // hosted checkout succeeds.
+  expect(order.invoice).toMatchObject({ vipSurcharge: 11.25, codFee: 0, paid: false, total: 86.25 });
+  expect(order.invoice.payment).toMatchObject({ status: "pending", provider: "networkIntl", amount: 86.25 });
   expect(order.invoice.items[0].name).toBe("قميص");
+  expect((await gatewayWebhook(request, order.invoice.payment, "succeeded")).ok()).toBeTruthy();
 
   await staffLogin(page, "admin@laundry.local");
   await page.goto(`/orders/${order.id}`);
