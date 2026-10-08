@@ -11,6 +11,8 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Sheet, SheetHeader } from "@/components/ui/sheet";
 import { OrdersPerDay, RevenuePerDay } from "@/components/charts/day-charts";
 import { cn } from "@/lib/cn";
+import { can } from "@/lib/permissions";
+import { financeData, parseFinanceRange } from "@/server/queries/finance";
 
 export async function generateMetadata() {
   const t = await getTranslations("dashboard");
@@ -26,6 +28,9 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
   const rangeParam = Number((await searchParams).range);
   const range: RangeDays = RANGES.includes(rangeParam as RangeDays) ? (rangeParam as RangeDays) : 30;
   const d = await dashboardData(session, range);
+  const finance = can(session.role, "finance.view")
+    ? await financeData(session, parseFinanceRange({ range: String(range) }))
+    : null;
   const openTotal = d.tally.reduce((s, x) => s + x.count, 0);
   const maxStatus = Math.max(1, ...d.byStatus.map((s) => s.count));
   const maxProduct = Math.max(1, ...d.topProducts.map((p) => p.quantity));
@@ -115,6 +120,12 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
               value: d.rating.avg !== null ? `${num(locale, d.rating.avg, 1)} / 5` : "—",
               hint: t("dashboard.ratingCount", { count: d.rating.count }),
             },
+            ...(finance
+              ? [
+                  { label: t("dashboard.fees"), value: money(locale, finance.pnl.fees), hint: null },
+                  { label: t("dashboard.profit"), value: money(locale, finance.pnl.profit), hint: t("dashboard.profitHint") },
+                ]
+              : []),
           ].map((m) => (
             <div
               key={m.label}

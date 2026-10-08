@@ -14,6 +14,7 @@ import { PrismaClient, type OrderStatus } from "../src/generated/prisma/client";
 import { invoiceTotals } from "../src/domain/pricing";
 import { PATHS } from "../src/domain/order-workflow";
 import { localDateOf, localMinuteToInstant, slotId } from "../src/domain/slots";
+import { gatewayFee, type PaymentProvider } from "../src/domain/payments";
 
 const db = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
@@ -202,6 +203,15 @@ async function seedBase() {
     });
   }
 
+  // Payment providers. Placeholder fees; each laundry enters its contract rates.
+  for (const g of GATEWAY_DEFAULTS) {
+    await db.vendorGateway.upsert({
+      where: { vendorId_provider: { vendorId: vendor.id, provider: g.provider } },
+      create: { ...g, vendorId: vendor.id },
+      update: {},
+    });
+  }
+
   // Portal accounts.
   const passwordHash = await hash(DEV_PASSWORD);
   const staff = [
@@ -219,6 +229,19 @@ async function seedBase() {
 
   return { vendor, customer };
 }
+
+const GATEWAY_DEFAULTS: {
+  provider: PaymentProvider;
+  feePercent: number;
+  feeFixed: number;
+  minAmount: number | null;
+  maxAmount: number | null;
+}[] = [
+  { provider: "networkIntl", feePercent: 2.5, feeFixed: 1, minAmount: null, maxAmount: null },
+  { provider: "telr", feePercent: 2.8, feeFixed: 1, minAmount: null, maxAmount: null },
+  { provider: "tabby", feePercent: 6, feeFixed: 1, minAmount: 50, maxAmount: 5000 },
+  { provider: "cash", feePercent: 0, feeFixed: 0, minAmount: null, maxAmount: null },
+];
 
 // ---- Demo orders ----------------------------------------------------------
 
@@ -245,6 +268,7 @@ async function seedDemo(vendorId: string, customerId: string) {
   const allTiers = await db.serviceTier.findMany({ where: { vendorId } });
   const subs = await db.subService.findMany();
   const vendor = await db.vendor.findUniqueOrThrow({ where: { id: vendorId } });
+  const adminId = (await db.staffUser.findUnique({ where: { email: "admin@laundry.local" } }))?.id ?? null;
   let number = vendor.orderSeq;
 
   const now = Date.now();
@@ -282,7 +306,9 @@ async function seedDemo(vendorId: string, customerId: string) {
         : status === "deliveryFailed" ? path.indexOf("outForDelivery")
         : path.indexOf(status);
 
-      const payMethod = rand() < 0.6 ? ("card" as const) : ("cashOnDelivery" as const);
+      const roll = rand();
+      let payMethod: "card" | "payLater" | "cashOnDelivery" =
+        roll < 0.5 ? "card" : roll < 0.62 ? "payLater" : "cashOnDelivery";
       const hasInvoice = kind === "SHOP" || reached >= path.indexOf("awaitingPayment");
       const items = hasInvoice
         ? Array.from({ length: 1 + Math.floor(rand() * 4) }, () => {
@@ -296,8 +322,11 @@ async function seedDemo(vendorId: string, customerId: string) {
         paymentMethod: kind === "SHOP" || reached > path.indexOf("awaitingPayment") ? payMethod : null,
         vendorCodFee: Number(vendor.codFee),
       });
+      // Tabby only takes orders of AED 50 and up.
+      if (payMethod === "payLater" && totals.total < 50) payMethod = "card";
       const paymentChosen = kind === "SHOP" || reached > path.indexOf("awaitingPayment");
-      const paid = paymentChosen && (payMethod === "card" || status === "delivered");
+      const online = payMethod !== "cashOnDelivery";
+      const paid = paymentChosen && (online || status === "delivered");
 
       const events: { status: OrderStatus; at: Date; actorType: "staff" | "driver" | "customer" | "system" }[] = [];
       let t = createdAt.getTime();
@@ -316,7 +345,8 @@ async function seedDemo(vendorId: string, customerId: string) {
       }
 
       const driver = rand() < 0.5 ? "usr-driver-1" : "usr-driver-2";
-      await db.order.create({
+      const created = await db.order.create({
+        include: { invoice: true },
         data: {
           vendorId,
           number,
@@ -378,10 +408,95 @@ async function seedDemo(vendorId: string, customerId: string) {
             : undefined,
         },
       });
+
+      // The payment ledger behind the invoice.
+      if (created.invoice && paid) {
+        const provider: PaymentProvider =
+          payMethod === "cashOnDelivery" ? "cash" : payMethod === "payLater" ? "tabby" : rand() < 0.6 ? "networkIntl" : "telr";
+        const schedule = GATEWAY_DEFAULTS.find((g) => g.provider === provider)!;
+        const paidAt = new Date(t);
+        const base = {
+          vendorId,
+          orderId: created.id,
+          invoiceId: created.invoice.id,
+          provider,
+          method: payMethod,
+          amount: totals.total,
+        };
+        if (online && rand() < 0.08) {
+          // A declined first attempt, retried successfully.
+          await db.payment.create({
+            data: {
+              ...base,
+              status: "failed",
+              failureReason: "Card declined by issuer",
+              providerRef: `DEMO-F-${number}`,
+              checkoutToken: `demo-f-${number}`,
+              createdAt: new Date(paidAt.getTime() - 600_000),
+            },
+          });
+        }
+        const payment = await db.payment.create({
+          data: {
+            ...base,
+            status: "succeeded",
+            feeAmount: gatewayFee(totals.total, schedule),
+            providerRef: online ? `DEMO-${number}` : null,
+            checkoutToken: `demo-${number}`,
+            collectedById: online ? null : driver,
+            paidAt,
+            createdAt: online ? new Date(paidAt.getTime() - 120_000) : paidAt,
+          },
+        });
+        if (status === "delivered" && rand() < 0.06) {
+          const full = rand() < 0.4;
+          const amount = full ? totals.total : Math.round(totals.total * 30) / 100;
+          await db.refund.create({
+            data: {
+              paymentId: payment.id,
+              vendorId,
+              amount,
+              reason: full ? "Order not satisfactory — full refund" : "Item returned with a stain — goodwill credit",
+              providerRef: online ? `DEMO-RF-${number}` : null,
+              createdById: adminId,
+              createdAt: new Date(paidAt.getTime() + DAY),
+            },
+          });
+          await db.payment.update({ where: { id: payment.id }, data: { status: full ? "refunded" : "partiallyRefunded" } });
+        }
+      }
     }
   }
   await db.vendor.update({ where: { id: vendorId }, data: { orderSeq: number } });
   console.log(`  demo: ${number - vendor.orderSeq} orders`);
+
+  // Running costs for the same weeks, so the Finance page shows a profit.
+  const expenses: { category: "rent" | "salaries" | "utilities" | "supplies" | "fuel" | "maintenance" | "marketing"; amount: number; day: string; description: string }[] = [];
+  for (let daysAgo = 42; daysAgo >= 0; daysAgo--) {
+    const day = localDateOf(new Date(now - daysAgo * DAY));
+    if (day.endsWith("-01")) {
+      expenses.push({ category: "rent", amount: 3500, day, description: "Shop and facility rent" });
+      expenses.push({ category: "salaries", amount: 7000, day, description: "Two drivers and one presser" });
+      expenses.push({ category: "utilities", amount: 700, day, description: "DEWA electricity and water" });
+    }
+    if (daysAgo % 7 === 0) {
+      expenses.push({ category: "supplies", amount: 350 + Math.round(rand() * 150), day, description: "Detergent, softener, hangers and bags" });
+      expenses.push({ category: "fuel", amount: 200 + Math.round(rand() * 100), day, description: "Delivery van fuel" });
+    }
+  }
+  expenses.push({ category: "maintenance", amount: 750, day: localDateOf(new Date(now - 20 * DAY)), description: "Dryer belt replacement" });
+  expenses.push({ category: "marketing", amount: 1500, day: localDateOf(new Date(now - 12 * DAY)), description: "Instagram campaign" });
+  await db.expense.createMany({
+    data: expenses.map((e) => ({
+      vendorId,
+      category: e.category,
+      amount: e.amount,
+      incurredOn: new Date(`${e.day}T00:00:00Z`),
+      description: e.description,
+      createdById: adminId,
+    })),
+  });
+  console.log(`  demo: ${expenses.length} expenses`);
 }
 
 async function main() {

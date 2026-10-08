@@ -10,7 +10,8 @@ export type NavIcon =
   | "reports"
   | "vendors"
   | "audit"
-  | "notifications";
+  | "notifications"
+  | "finance";
 
 export interface NavItem {
   href: string;
@@ -35,6 +36,7 @@ export const NAV_SECTIONS: { label: string; items: NavItem[] }[] = [
       { href: "/catalogue", label: "catalogue", icon: "catalogue", capability: "catalogue.manage" },
       { href: "/drivers", label: "drivers", icon: "drivers", capability: "drivers.manage" },
       { href: "/users", label: "users", icon: "users", capability: "customers.manage" },
+      { href: "/finance", label: "finance", icon: "finance", capability: "finance.view" },
     ],
   },
   {

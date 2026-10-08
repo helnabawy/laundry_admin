@@ -40,6 +40,11 @@ export async function GET(req: Request) {
     t("reports.total"),
     t("failure.title"),
     t("orders.rating"),
+    t("finance.providerLabel"),
+    t("finance.paidAt"),
+    t("finance.fees"),
+    t("finance.refunds"),
+    t("finance.net"),
   ];
   const localTime = (d: Date) =>
     new Intl.DateTimeFormat("en-CA", {
@@ -70,6 +75,11 @@ export async function GET(req: Request) {
     r.total ?? "",
     r.failure ? t(`failure.reason.${r.failure.split(":")[1]}`) : "",
     r.rating ?? "",
+    r.provider ? t(`finance.provider.${r.provider}`) : "",
+    r.paidAt ? localTime(r.paidAt) : "",
+    r.fees,
+    r.refunded,
+    r.paid && r.total !== null ? Math.round((r.total - r.fees - r.refunded) * 100) / 100 : "",
   ]);
 
   await audit(db, {
@@ -100,7 +110,7 @@ export async function GET(req: Request) {
   const ws = wb.addWorksheet(t("reports.results"), { views: [{ rightToLeft: lang === "ar", state: "frozen", ySplit: 1 }] });
   ws.addRow(headers).font = { bold: true };
   for (const row of data) ws.addRow(row);
-  ws.getColumn(14).numFmt = '#,##0.00 "AED"';
+  for (const c of [14, 19, 20, 21]) ws.getColumn(c).numFmt = '#,##0.00 "AED"';
   ws.columns.forEach((c) => {
     c.width = 16;
   });

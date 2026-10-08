@@ -64,13 +64,11 @@ async function laundryComparison(since: Date): Promise<LaundryRow[]> {
     SELECT v.id, v."nameEn", v."nameAr", v."isActive",
       (SELECT COUNT(*) FROM "Order" o WHERE o."vendorId" = v.id AND o."createdAt" >= ${since}) AS orders,
       (SELECT COUNT(*) FROM "Order" o WHERE o."vendorId" = v.id AND o.status::text = ANY(${openStatuses})) AS open,
-      (SELECT COALESCE(SUM(t.total), 0)::float FROM (
-         SELECT SUM(it.quantity * it."unitPrice") + i."vipSurcharge" + i."codFee" AS total
-         FROM "Invoice" i JOIN "Order" o ON o.id = i."orderId" JOIN "InvoiceItem" it ON it."invoiceId" = i.id
-         WHERE o."vendorId" = v.id AND i.paid AND i."paidAt" >= ${since}
-         GROUP BY i.id) t) AS revenue,
-      (SELECT COUNT(*) FROM "Invoice" i JOIN "Order" o ON o.id = i."orderId"
-         WHERE o."vendorId" = v.id AND i.paid AND i."paidAt" >= ${since}) AS invoices,
+      ((SELECT COALESCE(SUM(p.amount), 0) FROM "Payment" p
+         WHERE p."vendorId" = v.id AND p.status IN ('succeeded', 'partiallyRefunded', 'refunded') AND p."paidAt" >= ${since})
+       - (SELECT COALESCE(SUM(r.amount), 0) FROM "Refund" r WHERE r."vendorId" = v.id AND r."createdAt" >= ${since}))::float AS revenue,
+      (SELECT COUNT(DISTINCT p."invoiceId") FROM "Payment" p
+         WHERE p."vendorId" = v.id AND p.status IN ('succeeded', 'partiallyRefunded', 'refunded') AND p."paidAt" >= ${since}) AS invoices,
       (SELECT AVG(EXTRACT(EPOCH FROM (e.at - o."createdAt")) / 3600)::float
          FROM "Order" o JOIN "OrderStatusEvent" e ON e."orderId" = o.id AND e.status = 'delivered'
          WHERE o."vendorId" = v.id AND e.at >= ${since}) AS hours,
@@ -129,26 +127,26 @@ export async function dashboardData(session: Session, range: RangeDays): Promise
         _count: { _all: true },
       }),
       db.order.groupBy({ by: ["kind"], where: { ...scope, createdAt: { gte: since } }, _count: { _all: true } }),
+      // Revenue is money actually taken (the payment ledger), net of refunds.
       db.$queryRaw<{ revenue: number | null; invoices: bigint }[]>`
-        SELECT COALESCE(SUM(t.total), 0)::float AS revenue, COUNT(*) AS invoices FROM (
-          SELECT i.id, SUM(it.quantity * it."unitPrice") + i."vipSurcharge" + i."codFee" AS total
-          FROM "Invoice" i
-          JOIN "Order" o ON o.id = i."orderId"
-          JOIN "InvoiceItem" it ON it."invoiceId" = i.id
-          WHERE i.paid AND i."paidAt" >= ${since} ${vendorSql}
-          GROUP BY i.id) t`,
+        SELECT
+          (COALESCE((SELECT SUM(o.amount) FROM "Payment" o
+                      WHERE o.status IN ('succeeded', 'partiallyRefunded', 'refunded') AND o."paidAt" >= ${since} ${vendorSql}), 0)
+           - COALESCE((SELECT SUM(o.amount) FROM "Refund" o WHERE o."createdAt" >= ${since} ${vendorSql}), 0))::float AS revenue,
+          (SELECT COUNT(DISTINCT o."invoiceId") FROM "Payment" o
+            WHERE o.status IN ('succeeded', 'partiallyRefunded', 'refunded') AND o."paidAt" >= ${since} ${vendorSql}) AS invoices`,
       db.$queryRaw<{ day: string; kind: string; n: bigint }[]>`
         SELECT to_char(o."createdAt" AT TIME ZONE 'Asia/Dubai', 'YYYY-MM-DD') AS day, o.kind::text AS kind, COUNT(*) AS n
         FROM "Order" o WHERE o."createdAt" >= ${since} ${vendorSql}
         GROUP BY 1, 2`,
       db.$queryRaw<{ day: string; revenue: number }[]>`
-        SELECT to_char(t."paidAt" AT TIME ZONE 'Asia/Dubai', 'YYYY-MM-DD') AS day, SUM(t.total)::float AS revenue FROM (
-          SELECT i."paidAt", SUM(it.quantity * it."unitPrice") + i."vipSurcharge" + i."codFee" AS total
-          FROM "Invoice" i
-          JOIN "Order" o ON o.id = i."orderId"
-          JOIN "InvoiceItem" it ON it."invoiceId" = i.id
-          WHERE i.paid AND i."paidAt" >= ${since} ${vendorSql}
-          GROUP BY i.id) t
+        SELECT day, SUM(amount)::float AS revenue FROM (
+          SELECT to_char(o."paidAt" AT TIME ZONE 'Asia/Dubai', 'YYYY-MM-DD') AS day, o.amount
+          FROM "Payment" o
+          WHERE o.status IN ('succeeded', 'partiallyRefunded', 'refunded') AND o."paidAt" >= ${since} ${vendorSql}
+          UNION ALL
+          SELECT to_char(o."createdAt" AT TIME ZONE 'Asia/Dubai', 'YYYY-MM-DD'), -o.amount
+          FROM "Refund" o WHERE o."createdAt" >= ${since} ${vendorSql}) t
         GROUP BY 1`,
       db.$queryRaw<{ hours: number | null }[]>`
         SELECT AVG(EXTRACT(EPOCH FROM (e.at - o."createdAt")) / 3600)::float AS hours

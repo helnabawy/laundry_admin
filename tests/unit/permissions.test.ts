@@ -41,4 +41,12 @@ describe("permissions", () => {
     expect(manageableRoles("ADMIN")).toEqual([]);
     expect(manageableRoles("USER")).toEqual([]);
   });
+
+  it("finance and refunds belong to laundry owners and the super admin, not operators", () => {
+    for (const capability of ["finance.view", "finance.manage", "payments.refund"] as const) {
+      expect(can("SUPER_ADMIN", capability)).toBe(true);
+      expect(can("ADMIN", capability)).toBe(true);
+      expect(can("USER", capability)).toBe(false);
+    }
+  });
 });

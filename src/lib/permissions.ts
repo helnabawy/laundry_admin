@@ -4,7 +4,8 @@
  *
  * - SUPER_ADMIN — platform operator: every vendor, staff accounts, reports,
  *                 audit log.
- * - ADMIN       — runs one laundry: catalogue, drivers, app users, orders.
+ * - ADMIN       — runs one laundry: catalogue, drivers, app users, orders,
+ *                 and its money (income, refunds, expenses, profit).
  * - USER        — laundry operator: works orders day to day.
  */
 
@@ -23,7 +24,10 @@ export type Capability =
   | "staff.manage"
   | "vendors.manage"
   | "reports.view"
-  | "audit.view";
+  | "audit.view"
+  | "finance.view"
+  | "finance.manage"
+  | "payments.refund";
 
 const MATRIX: Record<StaffRole, readonly Capability[]> = {
   SUPER_ADMIN: [
@@ -32,11 +36,14 @@ const MATRIX: Record<StaffRole, readonly Capability[]> = {
     "orders.operate",
     "orders.cancel",
     "catalogue.manage",
-   "customers.manage",
+    "customers.manage",
     "staff.manage",
     "vendors.manage",
     "reports.view",
     "audit.view",
+    "finance.view",
+    "finance.manage",
+    "payments.refund",
   ],
   ADMIN: [
     "dashboard.view",
@@ -46,6 +53,9 @@ const MATRIX: Record<StaffRole, readonly Capability[]> = {
     "catalogue.manage",
     "drivers.manage",
     "customers.manage",
+    "finance.view",
+    "finance.manage",
+    "payments.refund",
   ],
   USER: ["dashboard.view", "orders.view", "orders.operate"],
 };

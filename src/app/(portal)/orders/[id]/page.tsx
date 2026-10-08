@@ -23,6 +23,8 @@ import { OrderActions } from "@/components/orders/order-actions";
 import { ProgressStrip } from "@/components/orders/progress-strip";
 import { KindGlyph } from "@/components/orders/kind-glyph";
 import { Sheet, SheetHeader } from "@/components/ui/sheet";
+import { OrderPayments } from "@/components/finance/order-payments";
+import { orderPayments } from "@/server/queries/finance";
 import { StatusStamp } from "@/components/ui/status-stamp";
 import { cn } from "@/lib/cn";
 
@@ -43,6 +45,7 @@ export default async function OrderPage({ params }: PageProps<"/orders/[id]">) {
   const locale = await getLocale();
   const canOperate = can(session.role, "orders.operate");
   const drivers = canOperate ? await vendorDrivers(order.vendorId) : [];
+  const payments = order.invoice ? await orderPayments(order.id) : [];
   const staffNames = await staffNamesById(
     order.events.filter((e) => e.actorType === "staff" && e.actorId).map((e) => e.actorId!),
   );
@@ -219,6 +222,8 @@ export default async function OrderPage({ params }: PageProps<"/orders/[id]">) {
               </div>
             ) : null}
           </Sheet>
+
+          {invoice ? <OrderPayments payments={payments} canRefund={can(session.role, "payments.refund")} /> : null}
 
           {order.kind === "WIZARD" && invoice ? (
             <Sheet>

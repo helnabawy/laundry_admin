@@ -23,6 +23,11 @@ const KNOWN: Record<string, string> = {
   "Laundry not found": "laundryNotFound",
   "Awaiting online payment": "awaitingOnlinePayment",
   "Payment not found": "paymentNotFound",
+  "Expense not found": "expenseNotFound",
+  "Only a completed payment can be refunded": "refundNotCaptured",
+  "Refund amount must be more than zero": "refundTooSmall",
+  "Refund is more than what is left on this payment": "refundTooLarge",
+  "Refund amount can have at most 2 decimals": "refundDecimals",
 };
 
 /**

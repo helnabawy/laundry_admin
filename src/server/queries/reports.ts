@@ -2,6 +2,8 @@ import "server-only";
 import { db } from "@/server/db";
 import { ORDER_STATUSES, type OrderKind, type OrderStatus } from "@/domain/order-workflow";
 import { localMinuteToInstant, isIsoDate, localDateOf } from "@/domain/slots";
+import { round2 } from "@/domain/pricing";
+import { CAPTURED_STATUSES } from "@/domain/payments";
 import { invoiceTotal, orderWhere } from "./orders";
 
 /** Report filters, parsed from URL search params (shared by page and export). */
@@ -40,7 +42,7 @@ export function parseReportFilters(params: Params): ReportFilters {
         ? (status as ReportFilters["status"])
         : undefined,
     kind: kind === "SHOP" || kind === "WIZARD" ? kind : undefined,
-    paymentMethod: payment === "card" || payment === "cashOnDelivery" || payment === "none" ? payment : undefined,
+    paymentMethod: payment === "card" || payment === "cashOnDelivery" || payment === "payLater" || payment === "none" ? payment : undefined,
     paid: paid === "yes" ? true : paid === "no" ? false : undefined,
     tierId: one(params.tier),
     driverId: one(params.driver),
@@ -88,7 +90,15 @@ const reportInclude = {
   tier: { select: { nameEn: true, nameAr: true } },
   pickupDriver: { select: { fullName: true } },
   deliveryDriver: { select: { fullName: true } },
-  invoice: { include: { items: { select: { quantity: true, unitPrice: true } } } },
+  invoice: {
+    include: {
+      items: { select: { quantity: true, unitPrice: true } },
+      payments: {
+        where: { status: { in: [...CAPTURED_STATUSES] } },
+        select: { provider: true, feeAmount: true, refunds: { select: { amount: true } } },
+      },
+    },
+  },
   failures: { select: { stage: true, reason: true }, orderBy: { createdAt: "desc" as const }, take: 1 },
   rating: { select: { stars: true } },
 };
@@ -109,6 +119,11 @@ export interface ReportRow {
   paymentMethod: string | null;
   paid: boolean | null;
   total: number | null;
+  /** Ledger figures for the money actually taken on this order. */
+  provider: string | null;
+  paidAt: Date | null;
+  fees: number;
+  refunded: number;
   failure: string | null;
   rating: number | null;
 }
@@ -130,6 +145,12 @@ function toRow(o: Awaited<ReturnType<typeof fetchRows>>[number]): ReportRow {
     paymentMethod: o.invoice?.paymentMethod ?? null,
     paid: o.invoice ? o.invoice.paid : null,
     total: o.invoice ? invoiceTotal(o.invoice) : null,
+    provider: o.invoice?.payments[0]?.provider ?? null,
+    paidAt: o.invoice?.paidAt ?? null,
+    fees: round2(o.invoice?.payments.reduce((s, p) => s + Number(p.feeAmount), 0) ?? 0),
+    refunded: round2(
+      o.invoice?.payments.reduce((s, p) => s + p.refunds.reduce((a, r) => a + Number(r.amount), 0), 0) ?? 0,
+    ),
     failure: o.failures[0] ? `${o.failures[0].stage}:${o.failures[0].reason}` : null,
     rating: o.rating?.stars ?? null,
   };

@@ -142,6 +142,7 @@ export default async function ReportsPage({ searchParams }: PageProps<"/reports"
                 <option value="">{t("reports.paymentAny")}</option>
                 <option value="card">{t("payment.card")}</option>
                 <option value="cashOnDelivery">{t("payment.cashOnDelivery")}</option>
+                <option value="payLater">{t("payment.payLater")}</option>
                 <option value="none">{t("reports.paymentNone")}</option>
               </Select>
             </Field>

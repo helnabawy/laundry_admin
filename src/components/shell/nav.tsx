@@ -14,6 +14,7 @@ import {
   Truck,
   Smartphone,
   UsersRound,
+  Wallet,
   type LucideIcon,
 } from "lucide-react";
 import { NAV_SECTIONS, type NavIcon } from "@/lib/nav";
@@ -31,6 +32,7 @@ const ICONS: Record<NavIcon, LucideIcon> = {
   vendors: Building2,
   audit: ScrollText,
   notifications: Bell,
+  finance: Wallet,
 };
 
 export function Nav({

@@ -154,6 +154,12 @@ export function Ticket({
           </dd>
         </dl>
 
+        {ticket.kind === "SHOP" && ticket.paid === false && (ticket.paymentMethod === "card" || ticket.paymentMethod === "payLater") ? (
+          <p className="mb-2 rounded-control bg-canary-wash px-2.5 py-2 text-[12.5px] font-medium text-canary-ink">
+            {t("orders.awaitingOnlinePayment")}
+          </p>
+        ) : null}
+
         {canOperate ? (
           <div className="relative z-10">
             <OrderActions
