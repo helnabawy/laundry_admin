@@ -5,7 +5,7 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 const nextConfig: NextConfig = {
   // Native modules used on the server only.
-  serverExternalPackages: ["@node-rs/argon2", "pg", "exceljs"],
+  serverExternalPackages: ["@node-rs/argon2", "pg", "exceljs", "firebase-admin"],
   experimental: {
     // Uploaded images (categories, products, condition photos) go through
     // server actions.

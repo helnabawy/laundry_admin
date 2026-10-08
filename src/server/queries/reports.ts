@@ -53,7 +53,9 @@ export function reportQueryString(f: ReportFilters, extra: Record<string, string
   const sp = new URLSearchParams();
   sp.set("from", f.from);
   sp.set("to", f.to);
-  if (f.vendorId) sp.set("vendor", f.vendorId);
+  // Always present: an empty value means "every laundry", while a missing one
+  // makes the page fall back to the laundry switcher.
+  sp.set("vendor", f.vendorId ?? "");
   if (f.status) sp.set("status", f.status);
   if (f.kind) sp.set("kind", f.kind);
   if (f.paymentMethod) sp.set("payment", f.paymentMethod);
@@ -152,41 +154,78 @@ export async function reportExportRows(f: ReportFilters) {
   return (await fetchRows(f, { take: EXPORT_LIMIT })).map(toRow);
 }
 
-export async function reportSummary(f: ReportFilters) {
+interface SummaryTotals {
+  orders: number;
+  delivered: number;
+  failedOrCancelled: number;
+  invoiced: number;
+  collected: number;
+  outstanding: number;
+}
+
+export interface LaundrySummary extends SummaryTotals {
+  vendorId: string;
+  nameEn: string;
+  nameAr: string;
+}
+
+export async function reportSummary(f: ReportFilters): Promise<SummaryTotals & { byLaundry: LaundrySummary[] | null }> {
   const rows = await db.order.findMany({
     where: where(f),
-    select: { status: true, invoice: { include: { items: { select: { quantity: true, unitPrice: true } } } } },
+    select: {
+      status: true,
+      vendor: { select: { id: true, nameEn: true, nameAr: true } },
+      invoice: { include: { items: { select: { quantity: true, unitPrice: true } } } },
+    },
   });
-  let invoiced = 0;
-  let collected = 0;
-  let delivered = 0;
-  let failedOrCancelled = 0;
+  const blank = () => ({ orders: 0, delivered: 0, failedOrCancelled: 0, invoiced: 0, collected: 0 });
+  const total = blank();
+  const perVendor = new Map<string, ReturnType<typeof blank> & { nameEn: string; nameAr: string }>();
   for (const r of rows) {
-    if (r.status === "delivered") delivered++;
-    if (r.status === "cancelled" || r.status === "pickupFailed" || r.status === "deliveryFailed") failedOrCancelled++;
-    if (r.invoice && r.status !== "cancelled") {
-      const total = invoiceTotal(r.invoice);
-      invoiced += total;
-      if (r.invoice.paid) collected += total;
+    const v = perVendor.get(r.vendor.id) ?? { ...blank(), nameEn: r.vendor.nameEn, nameAr: r.vendor.nameAr };
+    perVendor.set(r.vendor.id, v);
+    for (const acc of [total, v]) {
+      acc.orders++;
+      if (r.status === "delivered") acc.delivered++;
+      if (r.status === "cancelled" || r.status === "pickupFailed" || r.status === "deliveryFailed") acc.failedOrCancelled++;
+      if (r.invoice && r.status !== "cancelled") {
+        const amount = invoiceTotal(r.invoice);
+        acc.invoiced += amount;
+        if (r.invoice.paid) acc.collected += amount;
+      }
     }
   }
   const round = (n: number) => Math.round(n * 100) / 100;
-  return {
-    orders: rows.length,
-    delivered,
-    failedOrCancelled,
-    invoiced: round(invoiced),
-    collected: round(collected),
-    outstanding: round(invoiced - collected),
-  };
+  const finish = (a: ReturnType<typeof blank>): SummaryTotals => ({
+    orders: a.orders,
+    delivered: a.delivered,
+    failedOrCancelled: a.failedOrCancelled,
+    invoiced: round(a.invoiced),
+    collected: round(a.collected),
+    outstanding: round(a.invoiced - a.collected),
+  });
+  // Broken down by laundry only when the report spans more than one.
+  const byLaundry =
+    !f.vendorId && perVendor.size > 1
+      ? [...perVendor.entries()]
+          .map(([vendorId, v]) => ({ vendorId, nameEn: v.nameEn, nameAr: v.nameAr, ...finish(v) }))
+          .sort((a, b) => b.invoiced - a.invoiced)
+      : null;
+  return { ...finish(total), byLaundry };
 }
 
-export async function reportFilterOptions() {
+/** Dropdown options; tiers, drivers and categories follow the chosen laundry. */
+export async function reportFilterOptions(vendorId?: string) {
+  const scope = vendorId ? { vendorId } : {};
   const [vendors, tiers, drivers, categories] = await Promise.all([
     db.vendor.findMany({ orderBy: { createdAt: "asc" }, select: { id: true, nameEn: true, nameAr: true } }),
-    db.serviceTier.findMany({ orderBy: { sortOrder: "asc" }, select: { id: true, nameEn: true, nameAr: true } }),
-    db.mobileUser.findMany({ where: { role: "driver" }, orderBy: { fullName: "asc" }, select: { id: true, fullName: true, phone: true } }),
-    db.serviceCategory.findMany({ orderBy: { sortOrder: "asc" }, select: { id: true, nameEn: true, nameAr: true } }),
+    db.serviceTier.findMany({ where: scope, orderBy: { sortOrder: "asc" }, select: { id: true, nameEn: true, nameAr: true } }),
+    db.mobileUser.findMany({
+      where: { role: "driver", ...scope },
+      orderBy: { fullName: "asc" },
+      select: { id: true, fullName: true, phone: true },
+    }),
+    db.serviceCategory.findMany({ where: scope, orderBy: { sortOrder: "asc" }, select: { id: true, nameEn: true, nameAr: true } }),
   ]);
   return { vendors, tiers, drivers, categories };
 }

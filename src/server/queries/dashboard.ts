@@ -23,6 +23,95 @@ export interface DashboardData {
   topProducts: { nameEn: string; nameAr: string; quantity: number }[];
   tiers: { nameEn: string; nameAr: string; isVip: boolean; count: number }[];
   slots: { windowId: string; startMinute: number | null; count: number }[];
+  /** One row per laundry — only when a super admin is looking at all of them. */
+  laundries: LaundryRow[] | null;
+}
+
+export interface LaundryRow {
+  id: string;
+  nameEn: string;
+  nameAr: string;
+  isActive: boolean;
+  orders: number;
+  open: number;
+  revenue: number;
+  paidInvoices: number;
+  turnaroundHours: number | null;
+  failedStops: number;
+  rating: number | null;
+  ratingCount: number;
+}
+
+/** The period's headline numbers per laundry, oldest laundry first. */
+async function laundryComparison(since: Date): Promise<LaundryRow[]> {
+  const openStatuses = BOARD_COLUMNS.flatMap((c) => [...c.statuses]);
+  const rows = await db.$queryRaw<
+    {
+      id: string;
+      nameEn: string;
+      nameAr: string;
+      isActive: boolean;
+      orders: bigint;
+      open: bigint;
+      revenue: number | null;
+      invoices: bigint;
+      hours: number | null;
+      failed: bigint;
+      rating: number | null;
+      ratings: bigint;
+    }[]
+  >`
+    SELECT v.id, v."nameEn", v."nameAr", v."isActive",
+      (SELECT COUNT(*) FROM "Order" o WHERE o."vendorId" = v.id AND o."createdAt" >= ${since}) AS orders,
+      (SELECT COUNT(*) FROM "Order" o WHERE o."vendorId" = v.id AND o.status::text = ANY(${openStatuses})) AS open,
+      (SELECT COALESCE(SUM(t.total), 0)::float FROM (
+         SELECT SUM(it.quantity * it."unitPrice") + i."vipSurcharge" + i."codFee" AS total
+         FROM "Invoice" i JOIN "Order" o ON o.id = i."orderId" JOIN "InvoiceItem" it ON it."invoiceId" = i.id
+         WHERE o."vendorId" = v.id AND i.paid AND i."paidAt" >= ${since}
+         GROUP BY i.id) t) AS revenue,
+      (SELECT COUNT(*) FROM "Invoice" i JOIN "Order" o ON o.id = i."orderId"
+         WHERE o."vendorId" = v.id AND i.paid AND i."paidAt" >= ${since}) AS invoices,
+      (SELECT AVG(EXTRACT(EPOCH FROM (e.at - o."createdAt")) / 3600)::float
+         FROM "Order" o JOIN "OrderStatusEvent" e ON e."orderId" = o.id AND e.status = 'delivered'
+         WHERE o."vendorId" = v.id AND e.at >= ${since}) AS hours,
+      (SELECT COUNT(*) FROM "TaskFailure" f JOIN "Order" o ON o.id = f."orderId"
+         WHERE o."vendorId" = v.id AND f."createdAt" >= ${since}) AS failed,
+      (SELECT AVG(r.stars)::float FROM "OrderRating" r JOIN "Order" o ON o.id = r."orderId"
+         WHERE o."vendorId" = v.id AND r."ratedAt" >= ${since}) AS rating,
+      (SELECT COUNT(*) FROM "OrderRating" r JOIN "Order" o ON o.id = r."orderId"
+         WHERE o."vendorId" = v.id AND r."ratedAt" >= ${since}) AS ratings
+    FROM "Vendor" v
+    ORDER BY v."createdAt" ASC`;
+  return rows.map((r) => ({
+    id: r.id,
+    nameEn: r.nameEn,
+    nameAr: r.nameAr,
+    isActive: r.isActive,
+    orders: Number(r.orders),
+    open: Number(r.open),
+    revenue: Math.round((r.revenue ?? 0) * 100) / 100,
+    paidInvoices: Number(r.invoices),
+    turnaroundHours: r.hours,
+    failedStops: Number(r.failed),
+    rating: r.rating,
+    ratingCount: Number(r.ratings),
+  }));
+}
+
+/**
+ * Pickups per window, merged by start time: across all laundries, two
+ * laundries' 09:00 windows are one bar, not two bars with the same label.
+ */
+function slotsByStart(rows: { windowId: string; n: bigint }[], windowStart: Map<string, number>) {
+  const byStart = new Map<string, { windowId: string; startMinute: number | null; count: number }>();
+  for (const r of rows) {
+    const startMinute = windowStart.get(r.windowId) ?? null;
+    const key = startMinute === null ? `?${r.windowId}` : String(startMinute);
+    const row = byStart.get(key) ?? { windowId: r.windowId, startMinute, count: 0 };
+    row.count += Number(r.n);
+    byStart.set(key, row);
+  }
+  return [...byStart.values()].sort((a, b) => (a.startMinute ?? 0) - (b.startMinute ?? 0));
 }
 
 /** Dashboard aggregates for the period, in the viewer's vendor scope. */
@@ -88,6 +177,7 @@ export async function dashboardData(session: Session, range: RangeDays): Promise
         GROUP BY 1`,
       db.slotWindow.findMany({ where: scope, select: { id: true, startMinute: true } }),
     ]);
+  const laundries = vendorId ? null : await laundryComparison(since);
 
   const statusCount = new Map(openByStatus.map((r) => [r.status, r._count._all]));
   const tally = BOARD_COLUMNS.map((c) => ({
@@ -125,8 +215,8 @@ export async function dashboardData(session: Session, range: RangeDays): Promise
     byStatus: byStatus.map((r) => ({ status: r.status, count: r._count._all })).sort((a, b) => b.count - a.count),
     topProducts: topProducts.map((r) => ({ nameEn: r.nameEn, nameAr: r.nameAr, quantity: Number(r.quantity) })),
     tiers: tiers.map((r) => ({ nameEn: r.nameEn, nameAr: r.nameAr, isVip: r.isVip, count: Number(r.n) })),
-    slots: slotRows
-      .map((r) => ({ windowId: r.windowId, startMinute: windowStart.get(r.windowId) ?? null, count: Number(r.n) }))
-      .sort((a, b) => (a.startMinute ?? 0) - (b.startMinute ?? 0)),
+    slots: slotsByStart(slotRows, windowStart),
+    // A single laundry needs no comparison.
+    laundries: laundries && laundries.length > 1 ? laundries : null,
   };
 }

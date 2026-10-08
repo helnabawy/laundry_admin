@@ -1,4 +1,4 @@
-import { defaultVendor } from "@/server/auth/scope";
+import { requestVendor } from "@/server/auth/scope";
 import { badRequest, handle, ok } from "@/server/api/http";
 import { slot } from "@/server/api/serializers";
 import { slotsFor } from "@/server/slots";
@@ -17,7 +17,7 @@ export const GET = handle(async (req) => {
   const notBefore = notBeforeRaw ? new Date(hasOffset ? notBeforeRaw : `${notBeforeRaw}+04:00`) : undefined;
   if (notBefore && Number.isNaN(notBefore.getTime())) throw badRequest("notBefore must be an ISO date");
 
-  const vendor = await defaultVendor();
+  const vendor = await requestVendor(req);
   const slots = await slotsFor({ vendorId: vendor.id, date, type, notBefore });
   return ok(slots.map(slot));
 });

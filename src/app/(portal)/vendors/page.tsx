@@ -4,7 +4,7 @@ import { db } from "@/server/db";
 import { num, pick } from "@/lib/format";
 import { PageHeader } from "@/components/ui/page-header";
 import { Sheet, SheetHeader } from "@/components/ui/sheet";
-import { VendorForm } from "@/components/people/vendor-form";
+import { NewVendorDialog, VendorForm } from "@/components/people/vendor-form";
 
 export async function generateMetadata() {
   const t = await getTranslations("vendors");
@@ -21,7 +21,11 @@ export default async function VendorsPage() {
   });
   return (
     <>
-      <PageHeader title={t("title")} description={t("description")} />
+      <PageHeader
+        title={t("title")}
+        description={t("description")}
+        actions={<NewVendorDialog vendors={vendors.map((v) => ({ id: v.id, nameEn: v.nameEn, nameAr: v.nameAr }))} />}
+      />
       {vendors.length === 1 ? <p className="mb-4 max-w-[65ch] text-sm text-ink-3">{t("singleNote")}</p> : null}
       <div className="flex max-w-4xl flex-col gap-5">
         {vendors.map((v) => (
@@ -41,6 +45,10 @@ export default async function VendorsPage() {
                 nameEn: v.nameEn,
                 nameAr: v.nameAr,
                 phone: v.phone,
+                addressEn: v.addressEn,
+                addressAr: v.addressAr,
+                city: v.city,
+                area: v.area,
                 codFee: Number(v.codFee),
                 invoicePrefix: v.invoicePrefix,
                 isActive: v.isActive,

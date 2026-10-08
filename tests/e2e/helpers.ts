@@ -31,13 +31,13 @@ function isoDate(daysAhead: number) {
 }
 
 /** First open pickup slot 2 days out and a delivery slot that respects the tier. */
-export async function pickSlots(request: APIRequestContext, tierId: string, hours: number) {
-  const pickups = await (await request.get(`/api/timeslots?date=${isoDate(2)}&tier=${tierId}&type=pickup`)).json();
+export async function pickSlots(request: APIRequestContext, tierId: string, hours: number, headers: Record<string, string> = {}) {
+  const pickups = await (await request.get(`/api/timeslots?date=${isoDate(2)}&tier=${tierId}&type=pickup`, { headers })).json();
   const pickup = pickups.find((s: { isFull: boolean }) => !s.isFull);
   const notBefore = new Date(new Date(pickup.start).getTime() + hours * 3_600_000);
   for (let day = 3; day < 8; day++) {
     const deliveries = await (
-      await request.get(`/api/timeslots?date=${isoDate(day)}&tier=${tierId}&type=delivery&notBefore=${notBefore.toISOString()}`)
+      await request.get(`/api/timeslots?date=${isoDate(day)}&tier=${tierId}&type=delivery&notBefore=${notBefore.toISOString()}`, { headers })
     ).json();
     const delivery = deliveries.find((s: { isFull: boolean }) => !s.isFull);
     if (delivery) return { pickupSlotId: pickup.id as string, deliverySlotId: delivery.id as string };

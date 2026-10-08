@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
 import { Crown } from "lucide-react";
 import { requirePage } from "@/server/auth/session";
-import { dashboardData, type RangeDays } from "@/server/queries/dashboard";
+import { dashboardData, type LaundryRow, type RangeDays } from "@/server/queries/dashboard";
 import { BOARD_COLUMNS } from "@/domain/order-workflow";
 import { STATUS_STOCK, STOCK_CLASSES, STATUS_ICON } from "@/lib/stages";
 import { minuteToHhmm } from "@/domain/slots";
@@ -131,6 +131,8 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
         </dl>
       </section>
 
+      {d.laundries ? <LaundryComparison rows={d.laundries} locale={locale} t={t} /> : null}
+
       {d.orders === 0 ? (
         <Sheet className="px-5 py-10 text-center text-sm text-ink-2">{t("dashboard.noData")}</Sheet>
       ) : (
@@ -227,5 +229,71 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
         </div>
       )}
     </>
+  );
+}
+
+/** Super admin, "All laundries": the period's numbers side by side. */
+function LaundryComparison({
+  rows,
+  locale,
+  t,
+}: {
+  rows: LaundryRow[];
+  locale: string;
+  t: Awaited<ReturnType<typeof getTranslations>>;
+}) {
+  const totalRevenue = rows.reduce((s, r) => s + r.revenue, 0);
+  const th = "px-3 py-2.5 text-start text-[12.5px] font-medium text-ink-2 first:ps-4 sm:first:ps-5";
+  const td = "numerals px-3 py-3 text-end text-[13.5px] first:ps-4 sm:first:ps-5 last:pe-4 sm:last:pe-5";
+  return (
+    <Sheet className="mb-5">
+      <SheetHeader title={t("dashboard.laundriesTitle")} />
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[46rem] border-collapse">
+          <caption className="sr-only">{t("dashboard.laundriesTitle")}</caption>
+          <thead className="border-b border-rule">
+            <tr>
+              <th scope="col" className={th}>{t("nav.laundry")}</th>
+              <th scope="col" className={cn(th, "text-end")}>{t("dashboard.orders")}</th>
+              <th scope="col" className={cn(th, "text-end")}>{t("dashboard.openNow")}</th>
+              <th scope="col" className={cn(th, "w-[22%]")}>{t("dashboard.revenue")}</th>
+              <th scope="col" className={cn(th, "text-end")}>{t("dashboard.avgOrder")}</th>
+              <th scope="col" className={cn(th, "text-end")}>{t("dashboard.turnaround")}</th>
+              <th scope="col" className={cn(th, "text-end")}>{t("dashboard.failed")}</th>
+              <th scope="col" className={cn(th, "text-end last:pe-4 sm:last:pe-5")}>{t("dashboard.rating")}</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-rule">
+            {rows.map((r) => {
+              const share = totalRevenue ? r.revenue / totalRevenue : 0;
+              return (
+                <tr key={r.id}>
+                  <th scope="row" className="px-3 py-3 ps-4 text-start text-sm font-medium sm:ps-5">
+                    {pick(locale, r.nameEn, r.nameAr)}
+                    {!r.isActive ? <span className="ms-2 text-[12px] font-normal text-ink-3">{t("dashboard.paused")}</span> : null}
+                  </th>
+                  <td className={td}>{num(locale, r.orders)}</td>
+                  <td className={td}>{num(locale, r.open)}</td>
+                  <td className="px-3 py-3">
+                    <div className="flex items-center gap-2.5">
+                      <span className="h-2.5 flex-1 rounded-e-[3px] bg-card-recessed" aria-hidden>
+                        <span className="block h-full rounded-e-[3px] bg-[var(--chart-neutral)]" style={{ width: `${share * 100}%` }} />
+                      </span>
+                      <span className="numerals shrink-0 text-[13.5px]">{money(locale, r.revenue)}</span>
+                    </div>
+                  </td>
+                  <td className={td}>{r.paidInvoices ? money(locale, r.revenue / r.paidInvoices) : "—"}</td>
+                  <td className={td}>
+                    {r.turnaroundHours !== null ? t("dashboard.hours", { value: num(locale, r.turnaroundHours, 1) }) : "—"}
+                  </td>
+                  <td className={td}>{num(locale, r.failedStops)}</td>
+                  <td className={td}>{r.rating !== null ? `${num(locale, r.rating, 1)} / 5` : "—"}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </Sheet>
   );
 }

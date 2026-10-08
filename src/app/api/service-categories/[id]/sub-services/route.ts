@@ -1,11 +1,11 @@
 import { db } from "@/server/db";
-import { defaultVendor } from "@/server/auth/scope";
+import { requestVendor } from "@/server/auth/scope";
 import { handle, langOf, notFound, ok } from "@/server/api/http";
 import { subService } from "@/server/api/serializers";
 
 export const GET = handle(async (req, ctx: RouteContext<"/api/service-categories/[id]/sub-services">) => {
   const { id } = await ctx.params;
-  const vendor = await defaultVendor();
+  const vendor = await requestVendor(req);
   const cat = await db.serviceCategory.findFirst({
     where: { id, vendorId: vendor.id, isActive: true },
   });

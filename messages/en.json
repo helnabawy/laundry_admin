@@ -380,7 +380,9 @@
     "emailTaken": "Another account already uses this email.",
     "phoneTaken": "Another account already uses this phone number.",
     "cannotDeactivateSelf": "You can't switch off your own account.",
-    "inUse": "This is used by existing orders, so it can only be hidden, not deleted."
+    "inUse": "This is used by existing orders, so it can only be hidden, not deleted.",
+    "pickLaundry": "Pick a laundry in the top bar first, then try again.",
+    "laundryNotFound": "That laundry isn't accepting orders."
   },
   "dashboard": {
     "title": "Dashboard",
@@ -416,7 +418,10 @@
     "date": "Date",
     "count": "Count",
     "amount": "Amount",
-    "periodReceipt": "This period's receipt"
+    "periodReceipt": "This period's receipt",
+    "laundriesTitle": "Laundries side by side",
+    "openNow": "Open now",
+    "paused": "Not accepting orders"
   },
   "catalogue": {
     "title": "Services & prices",
@@ -499,7 +504,9 @@
       "sofa": "Upholstery",
       "bath": "Towels",
       "scissors": "Alterations"
-    }
+    },
+    "pickLaundryTitle": "Pick a laundry",
+    "pickLaundryBody": "Each laundry has its own services, prices, service levels and time slots. Choose one in the laundry switcher at the top to see and edit them."
   },
   "drivers": {
     "title": "Drivers",
@@ -586,7 +593,8 @@
     "empty": "No requests match these filters.",
     "created": "Created",
     "customer": "Customer",
-    "total": "Total"
+    "total": "Total",
+    "byLaundry": "By laundry"
   },
   "vendors": {
     "title": "Laundries",
@@ -601,7 +609,23 @@
     "drivers": "Drivers",
     "active": "Accepting orders",
     "edit": "Edit laundry",
-    "singleNote": "Phase 1 runs one laundry. More can be added later without changing any data."
+    "singleNote": "Only one laundry so far. Add another and a laundry switcher appears in the top bar; customers pick a laundry in the app.",
+    "add": "Add laundry",
+    "new": "New laundry",
+    "slug": "Short ID",
+    "slugHint": "Lowercase letters, numbers and dashes, e.g. \"marina\". Can't be changed later.",
+    "addressEn": "Address (English)",
+    "addressAr": "Address (Arabic)",
+    "city": "City",
+    "area": "Area",
+    "prefixHint": "Must be different for every laundry, so invoice numbers never repeat.",
+    "copyFrom": "Start with services from",
+    "copyNone": "Nothing — I'll set it up myself",
+    "copyHint": "Copies categories, products and prices, service levels and time windows. The copy is independent: later edits don't affect the other laundry.",
+    "created": "{name} added.",
+    "prefixTaken": "Another laundry already uses this invoice prefix.",
+    "slugTaken": "Another laundry already uses this short ID.",
+    "customersSee": "Customers see the name, address, city and area when picking a laundry in the app."
   },
   "audit": {
     "title": "Audit log",

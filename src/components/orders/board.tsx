@@ -33,6 +33,7 @@ export function Board({
   const locale = useLocale();
   const other = locale === "ar" ? "en" : "ar";
   const rack = useRef<HTMLDivElement>(null);
+  const mixedVendors = new Set(tickets.map((x) => x.vendorId)).size > 1;
 
   const byColumn = new Map<BoardColumnId, TicketView[]>();
   for (const col of BOARD_COLUMNS) byColumn.set(col.id, []);
@@ -140,6 +141,7 @@ export function Board({
                           drivers={driversByVendor[ticket.vendorId] ?? []}
                           canCancel={canCancel}
                           canOperate={canOperate}
+                          showVendor={mixedVendors}
                         />
                       </li>
                     ))}

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
 import { ChevronLeft, ChevronRight, Download, FileSpreadsheet, SearchX } from "lucide-react";
 import { requirePage } from "@/server/auth/session";
+import { switcherVendorId } from "@/server/auth/scope";
 import {
   parseReportFilters,
   reportFilterOptions,
@@ -46,13 +47,16 @@ function presets() {
 }
 
 export default async function ReportsPage({ searchParams }: PageProps<"/reports">) {
-  await requirePage("reports.view");
+  const session = await requirePage("reports.view");
   const t = await getTranslations();
   const locale = await getLocale();
   const params = await searchParams;
   const f = parseReportFilters(params);
+  // Opening the page follows the laundry switcher; the form's "Any" (an
+  // explicit empty `vendor=`) still reports across every laundry.
+  if (!("vendor" in params)) f.vendorId = (await switcherVendorId(session)) ?? undefined;
   const page = Math.max(1, Number(params.page) || 1);
-  const [options, result, summary] = await Promise.all([reportFilterOptions(), reportPage(f, page), reportSummary(f)]);
+  const [options, result, summary] = await Promise.all([reportFilterOptions(f.vendorId), reportPage(f, page), reportSummary(f)]);
   const qs = (extra: Record<string, string> = {}) => reportQueryString(f, extra);
 
   return (
@@ -199,6 +203,42 @@ export default async function ReportsPage({ searchParams }: PageProps<"/reports"
           ))}
         </dl>
       </Sheet>
+
+      {summary.byLaundry ? (
+        <Sheet className="mb-5">
+          <SheetHeader title={t("reports.byLaundry")} />
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[44rem] text-sm">
+              <caption className="sr-only">{t("reports.byLaundry")}</caption>
+              <thead>
+                <tr className="border-b border-rule text-[12.5px] text-ink-3">
+                  <th scope="col" className="px-3 py-2.5 ps-4 text-start font-medium sm:ps-5">{t("reports.laundry")}</th>
+                  {(["orders", "delivered", "cancelled", "invoiced", "collected", "outstanding"] as const).map((k) => (
+                    <th key={k} scope="col" className="px-3 py-2.5 text-end font-medium last:pe-4 sm:last:pe-5">{t(`reports.${k}`)}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-rule">
+                {summary.byLaundry.map((r) => (
+                  <tr key={r.vendorId}>
+                    <th scope="row" className="px-3 py-2.5 ps-4 text-start font-medium sm:ps-5">
+                      <Link href={`/reports?${reportQueryString({ ...f, vendorId: r.vendorId })}`} className="hover:underline">
+                        {pick(locale, r.nameEn, r.nameAr)}
+                      </Link>
+                    </th>
+                    <td className="numerals px-3 py-2.5 text-end">{num(locale, r.orders)}</td>
+                    <td className="numerals px-3 py-2.5 text-end">{num(locale, r.delivered)}</td>
+                    <td className="numerals px-3 py-2.5 text-end">{num(locale, r.failedOrCancelled)}</td>
+                    <td className="numerals px-3 py-2.5 text-end">{money(locale, r.invoiced)}</td>
+                    <td className="numerals px-3 py-2.5 text-end">{money(locale, r.collected)}</td>
+                    <td className="numerals px-3 py-2.5 pe-4 text-end sm:pe-5">{money(locale, r.outstanding)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Sheet>
+      ) : null}
 
       <Sheet>
         <SheetHeader title={t("reports.results")} actions={<span className="text-sm text-ink-2">{t("common.resultsCount", { count: num(locale, result.total) })}</span>} />

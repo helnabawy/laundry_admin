@@ -54,8 +54,10 @@ The portal only ever offers the next action that is legal for the order's path a
 - **Catalogue content is bilingual.** Every category, sub-service, product and tier has an English and an Arabic title and description. Categories carry an icon and an optional image.
 - **Notifications:**
   - The portal shows in-app realtime notifications for new orders, items picked up, payments chosen, failed pickups and deliveries, deliveries and ratings.
-  - Push and email are out of scope for phase 1.
-- **Multi-vendor:** phase 1 runs one laundry, but all data is vendor-scoped. A laundry switcher appears only once there is more than one.
+  - Customers and drivers get push notifications for their orders (Firebase). Email is out of scope.
+- **Multi-laundry:** each laundry has its own services, prices, service levels, time slots, drivers, staff and orders.
+  - Customers pick a laundry in the app and can change it from Home.
+  - Super admins add laundries, compare them on the dashboard, and switch between them in the top bar.
 - **Currency and region:** AED; UAE (Asia/Dubai time).
 
 ## Capabilities and Constraints
@@ -64,7 +66,7 @@ The portal only ever offers the next action that is legal for the order's path a
 - **Languages:** English (LTR) and Arabic (RTL), both first-class. Staff use both day to day, and the portal follows each user's saved preference. No hard-coded strings.
 - **Themes:** light and dark, first-class, with a follow-system option.
 - Order-status terminology reuses the app's ARB strings (for example "At the laundry" / "في المغسلة").
-- **Out of scope for phase 1:** real card payments, push notifications, auto-dispatch and SMS provider integration.
+- **Out of scope for phase 1:** real card payments, auto-dispatch and SMS provider integration.
 
 ## Brand Commitments
 

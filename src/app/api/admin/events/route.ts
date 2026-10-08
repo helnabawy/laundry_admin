@@ -1,15 +1,19 @@
 import { getSession } from "@/server/auth/session";
+import { switcherVendorId } from "@/server/auth/scope";
 import { subscribe } from "@/server/realtime/bus";
 
 export const dynamic = "force-dynamic";
 
 /**
  * Server-Sent Events for the portal: new notifications and order changes in
- * the viewer's vendor scope. The browser's EventSource reconnects on its own.
+ * the viewer's vendor scope — a super admin's switcher choice included (the
+ * bell remounts, and so reconnects, when the switcher changes). The browser's
+ * EventSource reconnects on its own.
  */
 export async function GET(req: Request) {
   const session = await getSession();
   if (!session) return new Response("Unauthorized", { status: 401 });
+  const scopeVendorId = await switcherVendorId(session);
 
   const encoder = new TextEncoder();
   let cleanup = () => {};
@@ -24,7 +28,7 @@ export async function GET(req: Request) {
       };
       send("retry: 5000\n\n");
       const unsubscribe = await subscribe((event) => {
-        if (session.vendorId && event.vendorId !== session.vendorId) return;
+        if (scopeVendorId && event.vendorId !== scopeVendorId) return;
         send(`event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`);
       });
       // Keep proxies from closing an idle stream.

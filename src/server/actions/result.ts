@@ -19,6 +19,8 @@ const KNOWN: Record<string, string> = {
   "A reason is required to cancel": "cancelReasonRequired",
   "Record the condition report: add findings or confirm there are none": "conditionReportRequired",
   "Add at least one item": "itemsRequired",
+  "Pick a laundry first": "pickLaundry",
+  "Laundry not found": "laundryNotFound",
 };
 
 /**

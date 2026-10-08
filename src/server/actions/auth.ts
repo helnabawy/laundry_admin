@@ -8,7 +8,7 @@ import { z } from "zod";
 import { db } from "@/server/db";
 import { endSession, getSession, startSession } from "@/server/auth/session";
 import { LOCALE_COOKIE, isLocale } from "@/i18n/config";
-import { VENDOR_COOKIE } from "@/server/auth/scope";
+import { VENDOR_COOKIE, isActiveVendor } from "@/server/auth/scope";
 
 export interface LoginState {
   error?: string;
@@ -58,5 +58,6 @@ export async function setLocale(locale: string) {
 export async function setVendorFilter(vendorId: string) {
   const session = await getSession();
   if (!session || session.role !== "SUPER_ADMIN") return;
-  (await cookies()).set(VENDOR_COOKIE, vendorId || "all", { path: "/", sameSite: "lax" });
+  const value = vendorId && (await isActiveVendor(vendorId)) ? vendorId : "all";
+  (await cookies()).set(VENDOR_COOKIE, value, { path: "/", sameSite: "lax" });
 }

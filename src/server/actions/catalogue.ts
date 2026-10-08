@@ -6,6 +6,7 @@ import { z } from "zod";
 import { db } from "@/server/db";
 import { requireCapability, type Session } from "@/server/auth/session";
 import { assertVendorAccess, vendorForWrite } from "@/server/auth/scope";
+import { publishCatalogueChanged } from "@/server/push";
 import { audit } from "@/server/orders/transition";
 import { storeImage } from "@/server/storage";
 import { CATEGORY_ICON_KEYS } from "@/lib/category-icons";
@@ -25,8 +26,10 @@ function done() {
   revalidatePath("/catalogue", "layout");
 }
 
+/** Audits a catalogue edit and tells that laundry's open apps to refetch. */
 async function logChange(session: Session, vendorId: string, action: string, entity: string, entityId: string, data?: object) {
   await audit(db, { actorId: session.userId, vendorId, action, entity, entityId, data: data as never });
+  void publishCatalogueChanged(vendorId);
 }
 
 function str(form: FormData, key: string) {
@@ -117,6 +120,7 @@ export async function moveCategoryAction(id: string, direction: "up" | "down") {
     if (j < 0 || j >= ids.length) return;
     [ids[i], ids[j]] = [ids[j], ids[i]];
     await db.$transaction(ids.map((cid, index) => db.serviceCategory.update({ where: { id: cid }, data: { sortOrder: index } })));
+    void publishCatalogueChanged(cat.vendorId);
     done();
   });
 }

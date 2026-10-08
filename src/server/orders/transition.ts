@@ -14,6 +14,7 @@ import {
   staffKindFor,
 } from "@/domain/notifications";
 import { CHANNEL, type PortalEvent } from "@/server/realtime/bus";
+import { queuePush, withPushOutbox } from "@/server/push";
 
 export type Tx = Prisma.TransactionClient;
 
@@ -90,6 +91,7 @@ export async function recordStatus(
     createdAt: at,
   };
 
+  const push = { orderId: order.id, orderNumber: order.number, vendorId: order.vendorId, status };
   const customerKind = customerKindFor(status, previous);
   if (customerKind) {
     await tx.notification.create({
@@ -100,6 +102,7 @@ export async function recordStatus(
         kind: customerKind,
       },
     });
+    queuePush(tx, { ...push, mobileUserId: order.customerId, kind: customerKind });
   }
 
   const driverKind = driverKindFor(status);
@@ -114,6 +117,7 @@ export async function recordStatus(
         kind: driverKind,
       },
     });
+    queuePush(tx, { ...push, mobileUserId: driverId, kind: driverKind });
   }
 
   const staffKind = staffKindFor(status, previous);
@@ -171,7 +175,8 @@ export async function transitionOrder(
   input: TransitionInput,
   client: { $transaction: typeof db.$transaction } = db,
 ): Promise<OrderRow> {
-  return client.$transaction(async (tx) => {
+  return withPushOutbox((attachOutbox) => client.$transaction(async (tx) => {
+    attachOutbox(tx);
     const order = await lockOrder(tx, input.orderId);
     input.guard?.(order);
     const previous = order.status;
@@ -198,6 +203,14 @@ export async function transitionOrder(
             orderNumber: order.number,
             vendorId: order.vendorId,
           },
+        });
+        queuePush(tx, {
+          mobileUserId: updated.pickupDriverId,
+          kind: "newPickup",
+          orderId: order.id,
+          orderNumber: order.number,
+          vendorId: order.vendorId,
+          status: next,
         });
       }
       await publish(tx, {
@@ -231,7 +244,7 @@ export async function transitionOrder(
       return { ...updated, status: "cancelled" };
     }
     return updated;
-  });
+  }));
 }
 
 export async function audit(

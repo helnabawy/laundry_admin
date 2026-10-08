@@ -16,7 +16,8 @@ export default async function PortalLayout({ children }: LayoutProps<"/">) {
   const session = await requireSession();
   const t = await getTranslations();
   const [unread, vendors] = await Promise.all([unreadCount(session), listActiveVendors()]);
-  const selectedVendor = (await cookies()).get(VENDOR_COOKIE)?.value ?? "all";
+  const cookieVendor = (await cookies()).get(VENDOR_COOKIE)?.value;
+  const selectedVendor = vendors.some((v) => v.id === cookieVendor) ? cookieVendor! : "all";
 
   return (
     <div className="min-h-dvh lg:grid lg:grid-cols-[15.5rem_1fr]">
@@ -50,7 +51,7 @@ export default async function PortalLayout({ children }: LayoutProps<"/">) {
               <LanguageToggle compact />
             </div>
             <ThemeToggle />
-            <NotificationBell initialUnread={unread} />
+            <NotificationBell key={selectedVendor} initialUnread={unread} />
             <div className="ms-1">
               <UserMenu name={session.name} email={session.email} role={session.role} />
             </div>

@@ -22,11 +22,14 @@ export function Ticket({
   drivers,
   canCancel,
   canOperate,
+  showVendor = false,
 }: {
   ticket: TicketView;
   drivers: DriverOption[];
   canCancel: boolean;
   canOperate: boolean;
+  /** Name the laundry — when the board mixes several. */
+  showVendor?: boolean;
 }) {
   const t = useTranslations();
   const locale = useLocale();
@@ -105,6 +108,12 @@ export function Ticket({
         </div>
 
         <div className="min-w-0 text-sm">
+          {showVendor ? (
+            <p className="mb-0.5 truncate text-[11.5px] font-medium uppercase tracking-[0.04em] text-ink-3">
+              <span className="sr-only">{t("orders.laundry")}: </span>
+              {locale === "ar" ? ticket.vendorName.ar : ticket.vendorName.en}
+            </p>
+          ) : null}
           <p className="truncate font-medium">{ticket.customerName || t("orders.noName")}</p>
           <p className="truncate text-[13px] text-ink-3">
             {ticket.area}

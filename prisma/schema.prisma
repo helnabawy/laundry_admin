@@ -1,7 +1,7 @@
 // Laundry platform — shared by the Admin Portal and the mobile app's REST API.
 //
-// Multi-vendor rule: every business row carries `vendorId`. Phase 1 runs a
-// single vendor (one laundry); adding more needs no schema change.
+// Multi-vendor rule: every business row carries `vendorId`. Each vendor is one
+// laundry; customers pick a laundry in the app and order from its catalogue.
 
 generator client {
   provider = "prisma-client"
@@ -21,9 +21,15 @@ model Vendor {
   nameAr        String
   phone         String?
   logoUrl       String?
+  /// Shown to customers in the app's laundry picker.
+  addressEn     String?
+  addressAr     String?
+  city          String?
+  area          String?
   isActive      Boolean  @default(true)
   /// Prefix for customer-facing invoice numbers, e.g. "INV" → "INV-1042".
-  invoicePrefix String   @default("INV")
+  /// Unique, because invoice numbers are unique across all laundries.
+  invoicePrefix String   @unique @default("INV")
   /// Flat handling fee added when the customer pays cash on delivery (AED).
   codFee        Decimal  @default(5) @db.Decimal(10, 2)
   /// Last order number issued; the next order takes `orderSeq + 1`.
@@ -94,6 +100,21 @@ model MobileUser {
   deliveryTasks   Order[]        @relation("DeliveryDriver")
   notifications   Notification[]
   supportRequests SupportRequest[]
+  devices         DeviceToken[]
+}
+
+/// A Firebase Cloud Messaging registration token for one app install.
+model DeviceToken {
+  id           String     @id @default(cuid())
+  token        String     @unique
+  mobileUserId String
+  mobileUser   MobileUser @relation(fields: [mobileUserId], references: [id], onDelete: Cascade)
+  platform     String
+  locale       String     @default("en")
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([mobileUserId])
 }
 
 model OtpChallenge {

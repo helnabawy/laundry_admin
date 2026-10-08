@@ -8,6 +8,8 @@ import { db } from "@/server/db";
 import { requireCapability, requireSession } from "@/server/auth/session";
 import { assertVendorAccess, vendorForWrite } from "@/server/auth/scope";
 import { audit } from "@/server/orders/transition";
+import { copyCatalogue } from "@/server/vendors/copy";
+import { publishCatalogueChanged } from "@/server/push";
 import { manageableRoles, type StaffRole } from "@/lib/permissions";
 import { ActionError, run } from "./result";
 
@@ -130,22 +132,81 @@ export async function changePasswordAction(input: { current: string; next: strin
 
 // ---- Vendors ----------------------------------------------------------------
 
+const optionalText = z.string().trim().max(200).optional();
+
 const vendorSchema = z.object({
   nameEn: z.string().trim().min(1).max(120),
   nameAr: z.string().trim().min(1).max(120),
   phone: z.string().trim().max(40).optional(),
+  addressEn: optionalText,
+  addressAr: optionalText,
+  city: z.string().trim().max(80).optional(),
+  area: z.string().trim().max(80).optional(),
   codFee: z.coerce.number().min(0).max(1000),
   invoicePrefix: z.string().trim().regex(/^[A-Z0-9]{1,8}$/),
   isActive: z.boolean(),
 });
 
+const newVendorSchema = vendorSchema.extend({
+  slug: z.string().trim().toLowerCase().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/).max(40),
+  /** Laundry whose catalogue, tiers and time windows the new one starts with. */
+  copyFromId: z.string().nullable(),
+});
+
+/** Empty optional strings are stored as null. */
+function vendorData(v: z.output<typeof vendorSchema>) {
+  return {
+    ...v,
+    phone: v.phone || null,
+    addressEn: v.addressEn || null,
+    addressAr: v.addressAr || null,
+    city: v.city || null,
+    area: v.area || null,
+  };
+}
+
+async function assertVendorUnique(id: string | null, slug: string | null, invoicePrefix: string) {
+  const t = await getTranslations("vendors");
+  const clash = await db.vendor.findFirst({
+    where: { id: id ? { not: id } : undefined, OR: [{ invoicePrefix }, ...(slug ? [{ slug }] : [])] },
+  });
+  if (!clash) return;
+  throw new ActionError(clash.invoicePrefix === invoicePrefix ? t("prefixTaken") : t("slugTaken"));
+}
+
 export async function saveVendorAction(id: string, input: z.input<typeof vendorSchema>) {
   return run(async () => {
     const session = await requireCapability("vendors.manage");
     const v = vendorSchema.parse({ ...input, invoicePrefix: String(input.invoicePrefix ?? "").toUpperCase() });
-    await db.vendor.update({ where: { id }, data: { ...v, phone: v.phone || null } });
+    await assertVendorUnique(id, null, v.invoicePrefix);
+    await db.vendor.update({ where: { id }, data: vendorData(v) });
     await audit(db, { actorId: session.userId, vendorId: id, action: "vendor.update", entity: "Vendor", entityId: id, data: v });
-    revalidatePath("/vendors");
+    revalidatePath("/", "layout");
+    void publishCatalogueChanged(id);
+  });
+}
+
+export async function createVendorAction(input: z.input<typeof newVendorSchema>) {
+  return run(async () => {
+    const session = await requireCapability("vendors.manage");
+    const v = newVendorSchema.parse({ ...input, invoicePrefix: String(input.invoicePrefix ?? "").toUpperCase() });
+    await assertVendorUnique(null, v.slug, v.invoicePrefix);
+    const { slug, copyFromId, ...rest } = v;
+    const created = await db.$transaction(async (tx) => {
+      const vendor = await tx.vendor.create({ data: { ...vendorData(rest), slug } });
+      if (copyFromId) await copyCatalogue(tx, copyFromId, vendor.id);
+      return vendor;
+    });
+    await audit(db, {
+      actorId: session.userId,
+      vendorId: created.id,
+      action: "vendor.create",
+      entity: "Vendor",
+      entityId: created.id,
+      data: { ...v },
+    });
+    // The switcher and every laundry dropdown live in the layout.
+    revalidatePath("/", "layout");
   });
 }
 

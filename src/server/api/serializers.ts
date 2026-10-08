@@ -155,9 +155,41 @@ export function user(u: {
   };
 }
 
+// ---- Laundries ----------------------------------------------------------------
+
+export function vendor(
+  lang: Lang,
+  v: {
+    id: string;
+    slug: string;
+    nameEn: string;
+    nameAr: string;
+    phone: string | null;
+    logoUrl: string | null;
+    addressEn: string | null;
+    addressAr: string | null;
+    city: string | null;
+    area: string | null;
+    codFee: Prisma.Decimal | number;
+  },
+) {
+  return {
+    id: v.id,
+    slug: v.slug,
+    name: tr(lang, v.nameEn, v.nameAr),
+    phone: v.phone,
+    logoUrl: absoluteUrl(v.logoUrl),
+    address: v.addressEn || v.addressAr ? tr(lang, v.addressEn ?? "", v.addressAr ?? "") : null,
+    city: v.city,
+    area: v.area,
+    codFee: num(v.codFee),
+  };
+}
+
 // ---- Orders -----------------------------------------------------------------
 
 export const orderInclude = {
+  vendor: { select: { id: true, nameEn: true, nameAr: true, phone: true } },
   lines: { include: { category: true, subService: true } },
   tier: true,
   events: { orderBy: [{ at: "asc" }, { id: "asc" }] },
@@ -211,6 +243,7 @@ export function order(lang: Lang, o: FullOrder) {
   return {
     id: o.id,
     number: o.number,
+    vendor: { id: o.vendor.id, name: tr(lang, o.vendor.nameEn, o.vendor.nameAr), phone: o.vendor.phone },
     lines: o.lines.map((l) => ({
       category: category(lang, l.category),
       subService: subService(lang, l.subService),

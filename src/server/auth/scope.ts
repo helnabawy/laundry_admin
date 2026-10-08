@@ -2,6 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { cookies } from "next/headers";
 import { db } from "@/server/db";
+import { DomainError } from "@/server/orders/transition";
 import type { Session } from "./session";
 
 /**
@@ -19,6 +20,27 @@ export const listActiveVendors = cache(() =>
     select: { id: true, slug: true, nameEn: true, nameAr: true },
   }),
 );
+
+/** Header the mobile app sends with the laundry the customer picked. */
+export const VENDOR_HEADER = "x-vendor-id";
+
+/**
+ * The laundry a mobile API request is for: the `X-Vendor-Id` header (or a
+ * `?vendor=` query parameter), matched by id or slug. Older app builds send
+ * neither and get the default laundry. A named laundry that doesn't exist or
+ * has stopped accepting orders is a 404, never a silent fallback.
+ */
+export async function requestVendor(req: Request) {
+  const named =
+    req.headers.get(VENDOR_HEADER)?.trim() ||
+    new URL(req.url).searchParams.get("vendor")?.trim();
+  if (!named) return defaultVendor();
+  const vendor = await db.vendor.findFirst({
+    where: { isActive: true, OR: [{ id: named }, { slug: named }] },
+  });
+  if (!vendor) throw new DomainError("Laundry not found", 404);
+  return vendor;
+}
 
 /** The vendor the mobile API serves when a request doesn't name one. */
 export const defaultVendor = cache(async () => {
@@ -50,11 +72,27 @@ export async function vendorWhere(
 
 /**
  * The single vendor a write applies to (e.g. creating a category). A super
- * admin writes to the switcher's vendor, or the default one.
+ * admin writes to the laundry picked in the switcher; with "All laundries"
+ * selected there is no right answer, so they're asked to pick one — unless
+ * only one laundry exists.
  */
 export async function vendorForWrite(session: Session): Promise<string> {
   if (session.vendorId) return session.vendorId;
-  return (await selectedVendorId()) ?? (await defaultVendor()).id;
+  const selected = await selectedVendorId();
+  if (selected) return selected;
+  const vendors = await listActiveVendors();
+  if (vendors.length === 1) return vendors[0].id;
+  throw new DomainError("Pick a laundry first");
+}
+
+/** True when `id` is an active laundry (guards the switcher cookie). */
+export async function isActiveVendor(id: string): Promise<boolean> {
+  return (await listActiveVendors()).some((v) => v.id === id);
+}
+
+/** The switcher's laundry for a super admin, or null ("all"). */
+export async function switcherVendorId(session: Session): Promise<string | null> {
+  return session.vendorId ?? (await selectedVendorId());
 }
 
 /** Throws unless the row belongs to a vendor the session may touch. */

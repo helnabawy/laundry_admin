@@ -69,7 +69,22 @@ All state changes go through `src/domain/order-workflow.ts`, a pure, unit-tested
 
 ## Multi-vendor
 
-Every business table has a `vendorId`. Phase 1 runs one laundry: the mobile API serves the first active vendor, or the one named in `DEFAULT_VENDOR_SLUG`. Admins and users are tied to one vendor. Super admins see all vendors, and a laundry switcher appears in the top bar once a second vendor exists.
+Each vendor is one laundry, and every business table has a `vendorId`.
+
+- **Adding a laundry:** super admins add laundries on `/vendors`. A new laundry can start from a copy of another laundry's services, prices, service levels and time windows. Each laundry needs its own invoice prefix, so invoice numbers never repeat across laundries.
+- **Who sees what:** admins and operators are tied to one laundry. Super admins see every laundry, and a laundry switcher appears in the top bar once a second laundry exists.
+  - With "All laundries" selected, the dashboard shows the laundries side by side and reports break totals down by laundry.
+  - Catalogue editing asks the super admin to pick a laundry first.
+- **Mobile API:** the app sends the customer's chosen laundry as an `X-Vendor-Id` header (id or slug). `GET /api/vendors` lists the laundries to choose from. A request without the header gets `DEFAULT_VENDOR_SLUG` or the oldest active laundry; an unknown or paused laundry returns 404.
+- **Drivers** belong to one laundry, and that laundry's admin manages them.
+
+## Push notifications
+
+Order status changes send a Firebase Cloud Messaging push to the customer, and new pickups and deliveries go to the driver. The text matches the app's own notification copy, in the language the device registered with. The push is sent after the transaction commits (`src/server/push`).
+
+Catalogue, tier, time-slot and laundry edits send a silent message to the `vendor-<id>` topic, so an app with the shop open refetches prices.
+
+The app registers its token with `POST /api/me/devices` and removes it with `DELETE /api/me/devices` on sign-out. Set `FIREBASE_SERVICE_ACCOUNT_JSON` to send pushes; without it, they're logged to the console.
 
 ## Layout
 
@@ -99,6 +114,5 @@ These are behind interfaces and ready to wire:
 
 - real card payments (card is treated as paid)
 - an SMS provider for OTP
-- push notifications (the app polls `/api/me/notifications`)
 - auto-dispatch
 - S3 storage (see `src/server/storage`)
