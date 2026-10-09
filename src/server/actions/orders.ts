@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireCapability } from "@/server/auth/session";
+import { requireCapability, type Session } from "@/server/auth/session";
 import {
   assignPickupDriver,
   cancelOrder,
@@ -20,7 +20,7 @@ function done(orderId: string) {
   revalidatePath("/dashboard");
 }
 
-const actor = (s: { userId: string; vendorId: string | null }) => ({ userId: s.userId, vendorId: s.vendorId });
+const actor = (s: Session) => ({ userId: s.userId, role: s.role, vendorIds: s.vendorIds });
 
 export async function assignPickupDriverAction(orderId: string, driverId: string) {
   return run(async () => {

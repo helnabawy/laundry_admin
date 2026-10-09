@@ -1,7 +1,7 @@
 import "server-only";
 import { Prisma } from "@/generated/prisma/client";
 import { db } from "@/server/db";
-import { vendorWhere } from "@/server/auth/scope";
+import { vendorSql, vendorWhere } from "@/server/auth/scope";
 import type { Session } from "@/server/auth/session";
 import { pnl, EXPENSE_CATEGORIES, type ExpenseCategory, type Pnl } from "@/domain/finance";
 import {
@@ -82,22 +82,17 @@ export interface FinanceData {
   byCategory: { category: ExpenseCategory; amount: number }[];
 }
 
-async function scopeSql(session: Session, column: Prisma.Sql) {
-  const scope = await vendorWhere(session);
-  return {
-    scope,
-    sql: scope.vendorId ? Prisma.sql`AND ${column} = ${scope.vendorId}` : Prisma.empty,
-  };
-}
-
 const capturedSql = Prisma.join(CAPTURED_STATUSES.map((s) => Prisma.sql`${s}::"PaymentStatus"`));
 
 export async function financeData(session: Session, range: FinanceRange): Promise<FinanceData> {
   const { start, end } = rangeInstants(range);
-  const { scope, sql: paySql } = await scopeSql(session, Prisma.sql`p."vendorId"`);
-  const refundSql = scope.vendorId ? Prisma.sql`AND r."vendorId" = ${scope.vendorId}` : Prisma.empty;
-  const expenseSql = scope.vendorId ? Prisma.sql`AND e."vendorId" = ${scope.vendorId}` : Prisma.empty;
-  const orderSql = scope.vendorId ? Prisma.sql`AND o."vendorId" = ${scope.vendorId}` : Prisma.empty;
+  const scope = await vendorWhere(session);
+  const [paySql, refundSql, expenseSql, orderSql] = await Promise.all([
+    vendorSql(session, Prisma.sql`p."vendorId"`),
+    vendorSql(session, Prisma.sql`r."vendorId"`),
+    vendorSql(session, Prisma.sql`e."vendorId"`),
+    vendorSql(session, Prisma.sql`o."vendorId"`),
+  ]);
 
   const [paidDays, refundDays, expenseDays, providers, categories, outstanding, pending] = await Promise.all([
     db.$queryRaw<{ day: string; gross: number; fees: number; n: bigint }[]>`

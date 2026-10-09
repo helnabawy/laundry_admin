@@ -147,8 +147,8 @@ checks `actor` (`staff` / `driver` / `customer` / `system`) as well as the order
    capability (`src/lib/permissions.ts`).
 2. `boardTickets(session)` / `listOrders(session, ...)` (`src/server/queries/orders.ts`) — builds a
    Prisma `where` scoped by `vendorWhere(session)` (`src/server/auth/scope.ts`), so an `ADMIN`/`USER`
-   physically cannot query another vendor's rows; a `SUPER_ADMIN` sees everything or one vendor via
-   the laundry switcher cookie.
+   physically cannot query rows of a laundry they aren't assigned to; a `SUPER_ADMIN` sees everything.
+   Either can narrow to one laundry with the switcher cookie (see §7 and `docs/ROLES.md`).
 3. The query result is mapped through a pure `toTicket()`/row-shaping function
    (`src/server/queries/orders.ts`) into a UI-shaped `TicketView`, never leaking Prisma's Decimal or
    internal field names into components.
@@ -206,9 +206,9 @@ message (logged server-side with method + path).
   takes the same time as a wrong-password one (timing-attack mitigation).
 - **Session**: `startSession()` signs a JWT (`jose`, HS256) whose *subject* is the staff user id, and
   sets it as an HTTP-only, `sameSite=lax` cookie (`SESSION_SECRET`, 12h TTL).
-  `getSession()` (`src/server/auth/session.ts:69`) verifies the token and **re-reads the `StaffUser`
-  row on every request** — a deactivated account or role change takes effect on the next request, not
-  after 12 hours.
+  `getSession()` (`src/server/auth/session.ts`) verifies the token and **re-reads the `StaffUser`
+  row and its laundry assignments on every request** — a deactivated account, a role change or a
+  removed laundry takes effect on the next request, not after 12 hours.
 - **Guards**: `requireSession()` (redirect to `/login`), `requirePage(capability)` (redirect to
   `/dashboard` if disallowed — used in Server Components), `requireCapability(capability)` (throws
   `ForbiddenError` — used in server actions/route handlers, since you can't redirect out of a POST).
@@ -219,7 +219,8 @@ message (logged server-side with method + path).
 - **Capabilities** (`src/lib/permissions.ts`): a static `MATRIX` from `StaffRole` (`SUPER_ADMIN` /
   `ADMIN` / `USER`) to a list of `Capability` strings (`orders.operate`, `catalogue.manage`, ...).
   Pure and synchronous, so the same matrix drives both server checks and (via props) which buttons the
-  client renders — no capability is ever encoded twice.
+  client renders — no capability is ever encoded twice. Roles decide *what*; laundry assignments
+  decide *where*. The full role / capability / scoping reference is **`docs/ROLES.md`**.
 
 ### Mobile (customer / driver)
 
@@ -242,12 +243,15 @@ message (logged server-side with method + path).
 
 Every business table carries `vendorId`; each vendor is one laundry.
 
-- `SUPER_ADMIN` has `vendorId = null` on their `StaffUser` row and can see every vendor, narrowed
-  by an optional cookie (`VENDOR_COOKIE`, the laundry switcher) — `src/server/auth/scope.ts:36-49`.
-- `ADMIN`/`USER` have a fixed `vendorId` and can never see or write another vendor's rows —
-  `vendorWhere(session)` returns `{ vendorId: session.vendorId }` unconditionally for them, and
-  `assertVendorAccess()` / the `vendorGuard()` closures in `staff.ts` throw `"Order not found"`
-  (never "forbidden" — no existence leak) if a row's `vendorId` doesn't match.
+- Staff are linked to laundries through `StaffVendor` rows: a `SUPER_ADMIN` has none and sees every
+  laundry; an `ADMIN` (laundry admin) has one or more; a `USER` (laundry operator) exactly one.
+  `getScope(session)` resolves `{ allowed, active }` once per request — the assigned laundries plus
+  the switcher cookie (`VENDOR_COOKIE`), which is only honoured when it names an allowed laundry.
+- `vendorWhere(session)` returns `{}` only for a super admin on "All laundries"; everyone else gets
+  `{ vendorId }` or `{ vendorId: { in: [...] } }` (deny by default). Raw SQL uses `vendorSql()`.
+  `assertVendorAccess()` / `canAccessVendor()` (the `vendorGuard()` closures in `staff.ts`, refunds)
+  throw `"Not found"` / `"Order not found"` (never "forbidden" — no existence leak) for a row outside
+  the person's laundries. Full reference: `docs/ROLES.md`.
 - **Mobile API:** `requestVendor(req)` reads the laundry the customer picked from the `X-Vendor-Id`
   header (or `?vendor=`), matching it by id or slug.
   - A request without one gets `defaultVendor()`: `DEFAULT_VENDOR_SLUG`, or the oldest active laundry.
@@ -255,14 +259,21 @@ Every business table carries `vendorId`; each vendor is one laundry.
   - `GET /api/vendors` lists the active laundries.
   - Order JSON carries `vendor: {id, name, phone}`.
   - A customer's order history spans every laundry.
-- **Writes by a super admin:** `vendorForWrite()` uses the laundry picked in the switcher. With "All
-  laundries" selected and more than one laundry, it throws `"Pick a laundry first"` instead of guessing.
-  The catalogue pages ask for a laundry up front for the same reason.
+- **Writes:** `vendorForWrite()` uses the laundry picked in the switcher (or the person's only
+  laundry). Looking at several laundries — a super admin on "All laundries", a laundry admin on "All
+  my laundries" — it throws `"Pick a laundry first"` instead of guessing. The catalogue and payment
+  settings pages ask for a laundry up front (`singleVendorId()`) for the same reason.
 - **Onboarding:** `createVendorAction` can copy another laundry's catalogue, tiers and slot windows
   (`src/server/vendors/copy.ts`). Every copied row gets a new id. `Vendor.invoicePrefix` is unique,
   because `Invoice.number` is unique across all laundries.
-- **Super admin views:** the dashboard's `laundryComparison()` and the report's `byLaundry` breakdown
-  only appear when looking at every laundry. The SSE stream follows the switcher too.
+- **Location:** a laundry has an optional map pin (`Vendor.latitude`/`longitude`). Staff paste
+  coordinates or a Google Maps link, which `parseLatLng()` in `src/domain/geo.ts` reads, or use the
+  browser's location. The order page shows the laundry's details, with a route to the customer when
+  both have pins. `GET /api/vendors` includes the pin.
+- **Multi-laundry views:** the dashboard's `laundryComparison()` appears whenever the view spans
+  several laundries (`spansLaundries()`) — for a laundry admin, only their own. The report's
+  `byLaundry` breakdown (super admin only) appears when looking at every laundry. The SSE stream
+  follows the same scope.
 
 ## 8. Domain layer (pure business rules)
 
@@ -367,7 +378,7 @@ what powers the `/audit` page (super-admin only).
   Postgres directly over `pg` rather than Prisma's own query engine binary.
 - **Schema** (`prisma/schema.prisma`) groups into:
   - **Tenancy** — `Vendor` (one row per laundry; `orderSeq` for human-readable order numbers,
-    `codFee`, `invoicePrefix`).
+    `codFee`, `invoicePrefix`, address and map pin).
   - **People** — `StaffUser` (portal, email+password, `StaffRole`), `MobileUser` (app,
     phone+OTP, `MobileRole` customer/driver), `OtpChallenge`, `Address`.
   - **Catalogue** — `ServiceCategory` → `SubService` (wizard path) and `Product` (shop path,
@@ -408,7 +419,7 @@ src/server/realtime/bus.ts
        ▼
 GET /api/admin/events  (src/app/api/admin/events/route.ts)
   - one ReadableStream per connected browser tab
-  - subscribes to the bus, filters by the viewer's vendorId
+  - subscribes to the bus, filters by the viewer's laundries (scopeVendorIds)
   - writes `event: notification|order\ndata: {...}\n\n` as it arrives
   - 25s heartbeat comment so proxies don't kill an idle connection
        │
@@ -488,7 +499,7 @@ Config: `vitest.config.mts` — `node` environment, no DB, no network; these run
 | `pricing.test.ts`          | Rounding to 2 decimals, VIP surcharge (flat vs. percentage), COD fee only applies to `cashOnDelivery`, `invoiceTotals` composition. |
 | `slots.test.ts`            | UAE offset arithmetic (`localMinuteToInstant`/`localDateOf`) around midnight, slot id round-tripping, `generateSlots` filtering (inactive windows, already-started slots, `notBefore` for delivery turnaround), `hhmmToMinute` validation. |
 | `notifications.test.ts`    | The `(status, previous) → notification kind` mapping, including the "don't double-notify after a failed-pickup auto-cancel" and "payment-chosen is only news when it followed `awaitingPayment`" rules. |
-| `permissions.test.ts`      | The full `Capability` matrix per role — reports/audit/staff-management are super-admin-only, drivers page is admin-only (not super admin), operators can't cancel or manage. |
+| `permissions.test.ts`      | The full `Capability` matrix per role — reports/audit are super-admin-only, staff management is super admin (everyone) and laundry admin (operators only), drivers page is admin-only (not super admin), operators can't cancel or manage; laundry-assignment counts per role (`assignmentProblem`). |
 | `messages.test.ts`         | English and Arabic message catalogues have identical key sets and identical ICU placeholders — catches an untranslated or mismatched-placeholder string at test time, not in the RTL UI. |
 
 ### End-to-end tests — `pnpm test:e2e` (Playwright, `tests/e2e/*.spec.ts`)
@@ -561,6 +572,7 @@ src/app/api/                  the mobile REST API + /api/admin/{events,reports/e
 src/app/(portal)/             portal pages (Server Components; one page per route)
 src/components/               client components: shell, orders board/table, catalogue forms, charts, UI primitives
 src/lib/permissions.ts        the Capability matrix (role → what it can do)
+src/server/auth/scope.ts      laundry scoping (role → where): vendorWhere, getScope, … — docs/ROLES.md
 src/i18n/                     next-intl config
 tests/unit/                   Vitest — domain-layer and cross-cutting rules
 tests/e2e/                    Playwright — full-stack flows against a real dev server + seeded DB

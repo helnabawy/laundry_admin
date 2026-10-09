@@ -18,13 +18,13 @@ export type StageNames = Record<BoardColumnId, { en: string; ar: string; hintEn:
  */
 export function Board({
   tickets,
-  driversByVendor,
+  drivers,
   canCancel,
   canOperate,
   stageNames,
 }: {
   tickets: TicketView[];
-  driversByVendor: Record<string, DriverOption[]>;
+  drivers: DriverOption[];
   canCancel: boolean;
   canOperate: boolean;
   stageNames: StageNames;
@@ -138,7 +138,7 @@ export function Board({
                       <li key={ticket.id}>
                         <Ticket
                           ticket={ticket}
-                          drivers={driversByVendor[ticket.vendorId] ?? []}
+                          drivers={drivers}
                           canCancel={canCancel}
                           canOperate={canOperate}
                           showVendor={mixedVendors}

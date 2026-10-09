@@ -8,8 +8,9 @@ import { can, type Capability, type StaffRole } from "@/lib/permissions";
 
 /**
  * Portal session: a signed, HTTP-only cookie holding the staff user id. The
- * user row is re-read on every request so a deactivated account or a role
- * change takes effect immediately.
+ * user row (and its laundry assignments) is re-read on every request so a
+ * deactivated account, a role change or a removed laundry takes effect
+ * immediately.
  */
 
 export const SESSION_COOKIE = "laundry_admin_session";
@@ -61,8 +62,12 @@ export interface Session {
   name: string;
   email: string;
   role: StaffRole;
-  /** null for SUPER_ADMIN (platform-wide). */
-  vendorId: string | null;
+  /**
+   * Laundries this person is assigned to: none for SUPER_ADMIN
+   * (platform-wide), one or more for ADMIN, exactly one for USER. Use the
+   * helpers in `./scope` rather than reading this directly.
+   */
+  vendorIds: string[];
   locale: string;
 }
 
@@ -71,14 +76,17 @@ export const getSession = cache(async (): Promise<Session | null> => {
   if (!token) return null;
   const userId = await verifySessionToken(token);
   if (!userId) return null;
-  const user = await db.staffUser.findUnique({ where: { id: userId } });
+  const user = await db.staffUser.findUnique({
+    where: { id: userId },
+    include: { vendors: { select: { vendorId: true }, orderBy: { createdAt: "asc" } } },
+  });
   if (!user || !user.isActive) return null;
   return {
     userId: user.id,
     name: user.name,
     email: user.email,
     role: user.role,
-    vendorId: user.vendorId,
+    vendorIds: user.role === "SUPER_ADMIN" ? [] : user.vendors.map((v) => v.vendorId),
     locale: user.locale,
   };
 });

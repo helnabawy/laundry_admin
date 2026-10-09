@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 import { ArrowLeft, CircleOff, MapPin, Phone } from "lucide-react";
 import { requirePage } from "@/server/auth/session";
+import { assignedVendorIds } from "@/server/auth/scope";
 import { customerDetail } from "@/server/queries/customers";
 import { dateTime, money, num, pick } from "@/lib/format";
 import { Sheet, SheetHeader } from "@/components/ui/sheet";
@@ -20,6 +21,9 @@ export async function generateMetadata({ params }: PageProps<"/users/[id]">) {
 
 export default async function UserPage({ params }: PageProps<"/users/[id]">) {
   const session = await requirePage("customers.manage");
+  // Laundry column only when this person works across several laundries.
+  const assigned = assignedVendorIds(session);
+  const showVendor = !assigned || assigned.length > 1;
   const { id } = await params;
   const detail = await customerDetail(session, id);
   if (!detail) notFound();
@@ -93,7 +97,7 @@ export default async function UserPage({ params }: PageProps<"/users/[id]">) {
           {orders.length === 0 ? (
             <EmptyState icon={ClipboardList} title={t("users.noOrders")} />
           ) : (
-            <OrdersTable rows={orders} showVendor={!session.vendorId} />
+            <OrdersTable rows={orders} showVendor={showVendor} />
           )}
         </Sheet>
         {isDriver ? null : (

@@ -1,6 +1,7 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import { Download, Receipt } from "lucide-react";
 import { requirePage } from "@/server/auth/session";
+import { spansLaundries } from "@/server/auth/scope";
 import { listExpenses, parseExpenseCategory, parseFinanceRange } from "@/server/queries/finance";
 import { EXPENSE_CATEGORIES } from "@/domain/finance";
 import { localDateOf } from "@/domain/slots";
@@ -24,7 +25,7 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/finance
   const total = rows.reduce((s, r) => s + r.amount, 0);
   const manage = can(session.role, "finance.manage");
   const today = localDateOf(new Date());
-  const showLaundry = !session.vendorId;
+  const showLaundry = await spansLaundries(session);
   const qs = new URLSearchParams({ from: range.from, to: range.to, ...(category ? { category } : {}) });
 
   return (

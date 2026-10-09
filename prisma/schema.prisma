@@ -26,6 +26,9 @@ model Vendor {
   addressAr     String?
   city          String?
   area          String?
+  /// Map pin of the laundry, for staff and drivers.
+  latitude      Float?
+  longitude     Float?
   isActive      Boolean  @default(true)
   /// Prefix for customer-facing invoice numbers, e.g. "INV" → "INV-1042".
   /// Unique, because invoice numbers are unique across all laundries.
@@ -39,7 +42,7 @@ model Vendor {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  staff         StaffUser[]
+  staff         StaffVendor[]
   drivers       MobileUser[]
   categories    ServiceCategory[]
   products      Product[]
@@ -61,16 +64,16 @@ enum StaffRole {
   USER
 }
 
-/// A portal account. SUPER_ADMIN is platform-wide (vendorId = null);
-/// ADMIN and USER belong to one vendor.
+/// A portal account. SUPER_ADMIN is platform-wide (no laundries);
+/// ADMIN (laundry admin) runs one or more laundries; USER (laundry operator)
+/// works in exactly one. Laundries are linked through `StaffVendor`.
 model StaffUser {
   id           String    @id @default(cuid())
   email        String    @unique
   passwordHash String
   name         String
   role         StaffRole
-  vendorId     String?
-  vendor       Vendor?   @relation(fields: [vendorId], references: [id])
+  vendors      StaffVendor[]
   locale       String    @default("en")
   isActive     Boolean   @default(true)
   lastLoginAt  DateTime?
@@ -79,6 +82,19 @@ model StaffUser {
 
   notificationReads StaffNotificationRead[]
   auditLogs         AuditLog[]
+}
+
+/// A laundry a staff member is assigned to. The role decides how many:
+/// SUPER_ADMIN none, ADMIN one or more, USER exactly one.
+model StaffVendor {
+  staffUserId String
+  vendorId    String
+  createdAt   DateTime  @default(now())
+  staffUser   StaffUser @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+  vendor      Vendor    @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  @@id([staffUserId, vendorId])
+  @@index([vendorId])
 }
 
 enum MobileRole {

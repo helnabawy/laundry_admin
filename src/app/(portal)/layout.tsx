@@ -1,7 +1,6 @@
-import { cookies } from "next/headers";
 import { getTranslations } from "next-intl/server";
 import { requireSession } from "@/server/auth/session";
-import { listActiveVendors, VENDOR_COOKIE } from "@/server/auth/scope";
+import { getScope, listScopeVendors } from "@/server/auth/scope";
 import { unreadCount } from "@/server/notifications";
 import { BrandMark } from "@/components/shell/brand-mark";
 import { Nav } from "@/components/shell/nav";
@@ -15,9 +14,19 @@ import { VendorSwitcher } from "@/components/shell/vendor-switcher";
 export default async function PortalLayout({ children }: LayoutProps<"/">) {
   const session = await requireSession();
   const t = await getTranslations();
-  const [unread, vendors] = await Promise.all([unreadCount(session), listActiveVendors()]);
-  const cookieVendor = (await cookies()).get(VENDOR_COOKIE)?.value;
-  const selectedVendor = vendors.some((v) => v.id === cookieVendor) ? cookieVendor! : "all";
+  const [unread, vendors, scope] = await Promise.all([unreadCount(session), listScopeVendors(session), getScope(session)]);
+  const selectedVendor = scope.active ?? "all";
+
+  // Super admin: every laundry. Laundry admin: their own, when they have several.
+  const switcher =
+    session.role !== "USER" && vendors.length > 1 ? (
+      <VendorSwitcher
+        vendors={vendors}
+        value={selectedVendor}
+        allLabel={session.role === "SUPER_ADMIN" ? "allLaundries" : "allMyLaundries"}
+        className="w-full sm:w-44"
+      />
+    ) : null;
 
   return (
     <div className="min-h-dvh lg:grid lg:grid-cols-[15.5rem_1fr]">
@@ -38,12 +47,12 @@ export default async function PortalLayout({ children }: LayoutProps<"/">) {
 
       <div className="flex min-w-0 flex-col">
         <header className="sticky top-0 z-40 flex h-16 items-center gap-2 border-b border-rule bg-counter/90 px-3 backdrop-blur-sm sm:px-5">
-          <MobileNav role={session.role} unread={unread} />
-          <OrderSearch className="w-full max-w-md" />
+          <MobileNav role={session.role} unread={unread}>
+            {switcher ? <div className="sm:hidden">{switcher}</div> : null}
+          </MobileNav>
+          <OrderSearch className="w-full min-w-0 max-w-md" />
           <div className="ms-auto flex items-center gap-1">
-            {session.role === "SUPER_ADMIN" && vendors.length > 1 ? (
-              <VendorSwitcher vendors={vendors} value={selectedVendor} />
-            ) : null}
+            {switcher ? <div className="hidden sm:block">{switcher}</div> : null}
             <div className="hidden sm:block">
               <LanguageToggle />
             </div>

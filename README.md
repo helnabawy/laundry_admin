@@ -23,8 +23,8 @@ pnpm dev                     # http://localhost:3000
 | Portal login           | Password       | Role                                    |
 | ---------------------- | -------------- | --------------------------------------- |
 | super@laundry.local    | `ChangeMe123!` | Super admin: every laundry, staff accounts, reports, audit |
-| admin@laundry.local    | `ChangeMe123!` | Admin: runs the laundry (no staff management) |
-| operator@laundry.local | `ChangeMe123!` | User: works orders                      |
+| admin@laundry.local    | `ChangeMe123!` | Laundry admin: runs their laundries, manages their operators |
+| operator@laundry.local | `ChangeMe123!` | Laundry operator: works one laundry's orders |
 
 Mobile accounts use OTP `1234` while `DEV_OTP_CODE` is set:
 
@@ -41,16 +41,19 @@ flutter run --dart-define=USE_MOCK_API=false --dart-define=API_BASE_URL=http://l
 
 ## Roles
 
-| Capability                                               | Super admin | Admin | User |
+| Capability                                               | Super admin | Laundry admin | Operator |
 | -------------------------------------------------------- | :---------: | :---: | :--: |
 | Orders: assign drivers, receive items, count & invoice, dispatch | ✓ | ✓ | ✓ |
 | Cancel an order                                          | ✓ | ✓ | – |
 | Services, items, service levels, time slots              | ✓ | ✓ | – |
 | Drivers page (add/edit a laundry's drivers)              | – | ✓ | – |
-| Staff accounts (portal users)                            | ✓ | – | – |
+| Staff accounts (portal users)                            | ✓ | operators of their laundries | – |
 | Reports and export, laundries, audit log                 | ✓ | – | – |
 
 The matrix is defined in `src/lib/permissions.ts`. Server actions check it, and so do pages.
+A super admin sees every laundry; a laundry admin is assigned one or more laundries by a super admin;
+an operator works in exactly one. See [`docs/ROLES.md`](docs/ROLES.md) for assignments, scoping and
+`GET /api/admin/me`.
 
 ## Order lifecycle
 
@@ -72,9 +75,9 @@ All state changes go through `src/domain/order-workflow.ts`, a pure, unit-tested
 Each vendor is one laundry, and every business table has a `vendorId`.
 
 - **Adding a laundry:** super admins add laundries on `/vendors`. A new laundry can start from a copy of another laundry's services, prices, service levels and time windows. Each laundry needs its own invoice prefix, so invoice numbers never repeat across laundries.
-- **Who sees what:** admins and operators are tied to one laundry. Super admins see every laundry, and a laundry switcher appears in the top bar once a second laundry exists.
-  - With "All laundries" selected, the dashboard shows the laundries side by side and reports break totals down by laundry.
-  - Catalogue editing asks the super admin to pick a laundry first.
+- **Who sees what:** operators work in one laundry; laundry admins in the laundries a super admin assigned them; super admins in every laundry. A laundry switcher appears in the top bar for a super admin once a second laundry exists, and for a laundry admin with more than one laundry ("All my laundries" is the default).
+  - Looking at several laundries, the dashboard shows them side by side; the super admin's reports break totals down by laundry.
+  - Catalogue editing and payment settings ask to pick a laundry first.
 - **Mobile API:** the app sends the customer's chosen laundry as an `X-Vendor-Id` header (id or slug). `GET /api/vendors` lists the laundries to choose from. A request without the header gets `DEFAULT_VENDOR_SLUG` or the oldest active laundry; an unknown or paused laundry returns 404.
 - **Drivers** belong to one laundry, and that laundry's admin manages them.
 

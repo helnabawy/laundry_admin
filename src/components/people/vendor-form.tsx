@@ -2,13 +2,15 @@
 
 import { useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Loader2, Plus } from "lucide-react";
+import { Loader2, Pencil, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { createVendorAction, saveVendorAction } from "@/server/actions/people";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { Field, Input, Select } from "@/components/ui/field";
 import { Switch } from "@/components/ui/switch";
+import { formatLatLng, parseLatLng } from "@/domain/geo";
+import { LocationField } from "./location-field";
 
 export interface VendorValues {
   id: string;
@@ -19,12 +21,18 @@ export interface VendorValues {
   addressAr: string | null;
   city: string | null;
   area: string | null;
+  latitude: number | null;
+  longitude: number | null;
   codFee: number;
   invoicePrefix: string;
   isActive: boolean;
 }
 
-type Draft = { [K in keyof Omit<VendorValues, "id" | "isActive">]: string } & { isActive: boolean };
+type Draft = { [K in keyof Omit<VendorValues, "id" | "isActive" | "latitude" | "longitude">]: string } & {
+  /** The map pin as typed: coordinates or a map link. */
+  location: string;
+  isActive: boolean;
+};
 
 function draftOf(vendor: VendorValues | null): Draft {
   return {
@@ -35,6 +43,10 @@ function draftOf(vendor: VendorValues | null): Draft {
     addressAr: vendor?.addressAr ?? "",
     city: vendor?.city ?? "",
     area: vendor?.area ?? "",
+    location:
+      vendor?.latitude != null && vendor.longitude != null
+        ? formatLatLng({ latitude: vendor.latitude, longitude: vendor.longitude })
+        : "",
     codFee: String(vendor?.codFee ?? 5),
     invoicePrefix: vendor?.invoicePrefix ?? "",
     isActive: vendor?.isActive ?? true,
@@ -64,6 +76,7 @@ function VendorFields({ v, setV }: { v: Draft; setV: (v: Draft) => void }) {
       <Field label={t("area")}>
         <Input value={v.area} onChange={(e) => setV({ ...v, area: e.target.value })} maxLength={80} />
       </Field>
+      <LocationField value={v.location} onChange={(location) => setV({ ...v, location })} />
       <Field label={t("phone")}>
         <Input value={v.phone} onChange={(e) => setV({ ...v, phone: e.target.value })} dir="ltr" inputMode="tel" />
       </Field>
@@ -88,30 +101,63 @@ function VendorFields({ v, setV }: { v: Draft; setV: (v: Draft) => void }) {
   );
 }
 
-export function VendorForm({ vendor }: { vendor: VendorValues }) {
+/** The draft as the server actions take it, or null when the pin can't be read. */
+function toInput({ location, ...v }: Draft) {
+  const pin = parseLatLng(location);
+  if (location.trim() && !pin) return null;
+  return { ...v, codFee: Number(v.codFee), latitude: pin?.latitude ?? null, longitude: pin?.longitude ?? null };
+}
+
+/** The pencil in a laundry's row: opens its details for editing. */
+export function EditVendorDialog({ vendor, name }: { vendor: VendorValues; name: string }) {
+  const t = useTranslations("vendors");
   const tc = useTranslations("common");
+  const [open, setOpen] = useState(false);
   const [v, setV] = useState(() => draftOf(vendor));
   const [pending, start] = useTransition();
   return (
-    <form
-      className="grid gap-4 px-4 py-4 sm:grid-cols-2 sm:px-5"
-      onSubmit={(e) => {
-        e.preventDefault();
-        start(async () => {
-          const res = await saveVendorAction(vendor.id, { ...v, codFee: Number(v.codFee) });
-          if (res.ok) toast.success(tc("saved"));
-          else toast.error(res.error);
-        });
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        // Reopening starts from what's saved, not an abandoned draft.
+        if (next) setV(draftOf(vendor));
+        setOpen(next);
       }}
     >
-      <VendorFields v={v} setV={setV} />
-      <div className="flex justify-end sm:col-span-2">
-        <Button type="submit" variant="stamp" disabled={pending}>
-          {pending ? <Loader2 className="animate-spin" aria-hidden /> : null}
-          {tc("saveChanges")}
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="iconSm" aria-label={t("editNamed", { name })}>
+          <Pencil aria-hidden />
         </Button>
-      </div>
-    </form>
+      </DialogTrigger>
+      <DialogContent title={t("edit")} description={name} closeLabel={tc("close")} wide>
+        <form
+          className="grid gap-4 sm:grid-cols-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const input = toInput(v);
+            if (!input) {
+              toast.error(t("locationUnreadable"));
+              return;
+            }
+            start(async () => {
+              const res = await saveVendorAction(vendor.id, input);
+              if (res.ok) {
+                toast.success(tc("saved"));
+                setOpen(false);
+              } else toast.error(res.error);
+            });
+          }}
+        >
+          <VendorFields v={v} setV={setV} />
+          <div className="flex justify-end border-t border-rule pt-4 sm:col-span-2">
+            <Button type="submit" variant="stamp" disabled={pending}>
+              {pending ? <Loader2 className="animate-spin" aria-hidden /> : null}
+              {tc("saveChanges")}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -136,8 +182,13 @@ export function NewVendorDialog({ vendors }: { vendors: { id: string; nameEn: st
           className="grid gap-4 sm:grid-cols-2"
           onSubmit={(e) => {
             e.preventDefault();
+            const input = toInput(v);
+            if (!input) {
+              toast.error(t("locationUnreadable"));
+              return;
+            }
             start(async () => {
-              const res = await createVendorAction({ ...v, codFee: Number(v.codFee), slug, copyFromId: copyFromId || null });
+              const res = await createVendorAction({ ...input, slug, copyFromId: copyFromId || null });
               if (res.ok) {
                 toast.success(t("created", { name: locale === "ar" ? v.nameAr : v.nameEn }));
                 setOpen(false);

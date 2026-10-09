@@ -9,7 +9,8 @@ import { BrandMark } from "./brand-mark";
 import { Button } from "@/components/ui/button";
 import type { StaffRole } from "@/lib/permissions";
 
-export function MobileNav({ role, unread }: { role: StaffRole; unread: number }) {
+/** [children]: controls that don't fit the header on a phone (the laundry switcher). */
+export function MobileNav({ role, unread, children }: { role: StaffRole; unread: number; children?: React.ReactNode }) {
   const t = useTranslations();
   const [open, setOpen] = useState(false);
   return (
@@ -32,6 +33,7 @@ export function MobileNav({ role, unread }: { role: StaffRole; unread: number })
           </div>
           <Dialog.Title className="sr-only">{t("nav.menu")}</Dialog.Title>
           <Dialog.Description className="sr-only">{t("nav.main")}</Dialog.Description>
+          {children}
           <Nav role={role} unread={unread} onNavigate={() => setOpen(false)} />
         </Dialog.Content>
       </Dialog.Portal>

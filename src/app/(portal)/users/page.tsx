@@ -23,7 +23,7 @@ export default async function UsersPage({ searchParams }: PageProps<"/users">) {
   const params = await searchParams;
   const q = typeof params.q === "string" ? params.q : undefined;
   const status = params.status === "active" || params.status === "blocked" ? params.status : undefined;
-  const platform = !session.vendorId;
+  const platform = session.role === "SUPER_ADMIN";
   const role = platform && (params.role === "customer" || params.role === "driver") ? params.role : undefined;
   const page = Math.max(1, Number(params.page) || 1);
   const result = await listCustomers(session, { q, status, role, page });
@@ -41,7 +41,7 @@ export default async function UsersPage({ searchParams }: PageProps<"/users">) {
     <>
       <PageHeader
         title={t("users.title")}
-        description={session.vendorId ? t("users.descriptionLaundry") : t("users.description")}
+        description={platform ? t("users.description") : t("users.descriptionLaundry")}
       />
       <form
         className={cn("mb-4 grid gap-2", platform ? "sm:grid-cols-[1fr_11rem_11rem_auto]" : "sm:grid-cols-[1fr_12rem_auto]")}

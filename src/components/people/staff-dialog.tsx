@@ -17,7 +17,7 @@ export interface StaffValues {
   name: string;
   email: string;
   role: StaffRole;
-  vendorId: string | null;
+  vendorIds: string[];
   isActive: boolean;
 }
 
@@ -29,7 +29,8 @@ export function StaffDialog({
 }: {
   staff: StaffValues | null;
   roles: StaffRole[];
-  vendors: { id: string; nameEn: string; nameAr: string }[] | null;
+  /** Laundries the signed-in person may assign: all for a super admin, their own for a laundry admin. */
+  vendors: { id: string; nameEn: string; nameAr: string }[];
   isSelf?: boolean;
 }) {
   const t = useTranslations("staff");
@@ -42,7 +43,7 @@ export function StaffDialog({
     name: staff?.name ?? "",
     email: staff?.email ?? "",
     role: staff?.role ?? roles[roles.length - 1],
-    vendorId: staff?.vendorId ?? vendors?.[0]?.id ?? null,
+    vendorIds: staff?.vendorIds.length ? staff.vendorIds : vendors.slice(0, 1).map((x) => x.id),
     isActive: staff?.isActive ?? true,
     password: "",
   });
@@ -65,7 +66,9 @@ export function StaffDialog({
           onSubmit={(e) => {
             e.preventDefault();
             start(async () => {
-              const res = await saveStaffAction(staff?.id ?? null, { ...v, password: v.password || undefined });
+              // A super admin has no laundries; an operator works in exactly one.
+              const vendorIds = v.role === "SUPER_ADMIN" ? [] : v.role === "USER" ? v.vendorIds.slice(0, 1) : v.vendorIds;
+              const res = await saveStaffAction(staff?.id ?? null, { ...v, vendorIds, password: v.password || undefined });
               if (res.ok) {
                 toast.success(staff ? tc("saved") : t("created", { name: v.name }));
                 setOpen(false);
@@ -100,9 +103,9 @@ export function StaffDialog({
               ))}
             </div>
           </fieldset>
-          {vendors && vendors.length > 1 && v.role !== "SUPER_ADMIN" ? (
+          {vendors.length > 1 && v.role === "USER" ? (
             <Field label={t("laundry")} htmlFor="s-vendor">
-              <Select id="s-vendor" value={v.vendorId ?? ""} onChange={(e) => setV({ ...v, vendorId: e.target.value })}>
+              <Select id="s-vendor" value={v.vendorIds[0] ?? ""} onChange={(e) => setV({ ...v, vendorIds: [e.target.value] })}>
                 {vendors.map((x) => (
                   <option key={x.id} value={x.id}>
                     {locale === "ar" ? x.nameAr : x.nameEn}
@@ -110,6 +113,32 @@ export function StaffDialog({
                 ))}
               </Select>
             </Field>
+          ) : null}
+          {vendors.length > 1 && v.role === "ADMIN" ? (
+            <fieldset>
+              <legend className="mb-1.5 text-[13px] font-medium text-ink-2">{t("laundries")}</legend>
+              <div className="flex max-h-48 flex-col gap-1 overflow-y-auto rounded-control border border-rule p-1">
+                {vendors.map((x) => (
+                  <label key={x.id} className="flex min-h-10 cursor-pointer items-center gap-2.5 rounded-control px-2 text-sm hover:bg-card-recessed">
+                    <input
+                      type="checkbox"
+                      name="vendorIds"
+                      value={x.id}
+                      checked={v.vendorIds.includes(x.id)}
+                      onChange={(e) =>
+                        setV({
+                          ...v,
+                          vendorIds: e.target.checked ? [...v.vendorIds, x.id] : v.vendorIds.filter((id) => id !== x.id),
+                        })
+                      }
+                      className="size-4 accent-[var(--stamp)]"
+                    />
+                    {locale === "ar" ? x.nameAr : x.nameEn}
+                  </label>
+                ))}
+              </div>
+              <p className="mt-1.5 text-[12.5px] text-ink-3">{t("laundriesHint")}</p>
+            </fieldset>
           ) : null}
           <Field label={staff ? t("resetPassword") : t("password")} htmlFor="s-pass" hint={t("passwordHint")}>
             <Input

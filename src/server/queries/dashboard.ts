@@ -1,7 +1,7 @@
 import "server-only";
 import { Prisma } from "@/generated/prisma/client";
 import { db } from "@/server/db";
-import { vendorWhere } from "@/server/auth/scope";
+import { spansLaundries, vendorSql as scopeSql, vendorWhere } from "@/server/auth/scope";
 import type { Session } from "@/server/auth/session";
 import { BOARD_COLUMNS, type BoardColumnId, type OrderStatus } from "@/domain/order-workflow";
 import { localDateOf } from "@/domain/slots";
@@ -42,8 +42,12 @@ export interface LaundryRow {
   ratingCount: number;
 }
 
-/** The period's headline numbers per laundry, oldest laundry first. */
-async function laundryComparison(since: Date): Promise<LaundryRow[]> {
+/**
+ * The period's headline numbers per laundry, oldest laundry first. `vendorSql`
+ * limits it to the viewer's laundries (a laundry admin's comparison shows
+ * only theirs).
+ */
+async function laundryComparison(since: Date, vendorSql: Prisma.Sql): Promise<LaundryRow[]> {
   const openStatuses = BOARD_COLUMNS.flatMap((c) => [...c.statuses]);
   const rows = await db.$queryRaw<
     {
@@ -79,6 +83,7 @@ async function laundryComparison(since: Date): Promise<LaundryRow[]> {
       (SELECT COUNT(*) FROM "OrderRating" r JOIN "Order" o ON o.id = r."orderId"
          WHERE o."vendorId" = v.id AND r."ratedAt" >= ${since}) AS ratings
     FROM "Vendor" v
+    WHERE TRUE ${vendorSql}
     ORDER BY v."createdAt" ASC`;
   return rows.map((r) => ({
     id: r.id,
@@ -115,9 +120,8 @@ function slotsByStart(rows: { windowId: string; n: bigint }[], windowStart: Map<
 /** Dashboard aggregates for the period, in the viewer's vendor scope. */
 export async function dashboardData(session: Session, range: RangeDays): Promise<DashboardData> {
   const scope = await vendorWhere(session);
-  const vendorId = scope.vendorId ?? null;
   const since = new Date(Date.now() - range * 86_400_000);
-  const vendorSql = vendorId ? Prisma.sql`AND o."vendorId" = ${vendorId}` : Prisma.empty;
+  const vendorSql = await scopeSql(session, Prisma.sql`o."vendorId"`);
 
   const [openByStatus, periodOrders, revenueRows, perDayOrders, perDayRevenue, turnaround, failedStops, rating, byStatus, topProducts, tiers, slotRows, windows] =
     await Promise.all([
@@ -175,7 +179,10 @@ export async function dashboardData(session: Session, range: RangeDays): Promise
         GROUP BY 1`,
       db.slotWindow.findMany({ where: scope, select: { id: true, startMinute: true } }),
     ]);
-  const laundries = vendorId ? null : await laundryComparison(since);
+  // Side-by-side laundries only when the view spans more than one.
+  const laundries = (await spansLaundries(session))
+    ? await laundryComparison(since, await scopeSql(session, Prisma.sql`v.id`))
+    : null;
 
   const statusCount = new Map(openByStatus.map((r) => [r.status, r._count._all]));
   const tally = BOARD_COLUMNS.map((c) => ({

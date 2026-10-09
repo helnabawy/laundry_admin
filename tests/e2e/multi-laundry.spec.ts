@@ -90,3 +90,30 @@ test("the app registers and removes its push token", async ({ request }) => {
   expect(remove.status()).toBe(204);
   expect((await request.post("/api/me/devices", { data: { token, platform: "android" } })).status()).toBe(401);
 });
+
+test("a laundry's map pin shows on its orders", async ({ page, request }) => {
+  await staffLogin(page, "super@laundry.local");
+  await page.goto("/vendors");
+  // The first row is the oldest active laundry; its pencil opens the edit form.
+  await page.getByRole("button", { name: /^Edit / }).first().click();
+  const dialog = page.getByRole("dialog", { name: "Edit laundry" });
+  const location = dialog.getByLabel("Map location");
+  await location.fill("https://maps.app.goo.gl/abc123");
+  await expect(dialog.getByText("No coordinates found.")).toBeVisible();
+  await location.fill("https://www.google.com/maps/place/Laundry/@25.07,55.13,17z/data=!3d25.0772!4d55.1393");
+  await expect(dialog.getByText("25.077200, 55.139300")).toBeVisible();
+  await dialog.getByRole("button", { name: "Save changes" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page.getByRole("table").getByRole("link", { name: "Open in maps" }).first()).toHaveAttribute("href", /25\.0772,55\.1393/);
+  await page.getByRole("button", { name: /^Edit / }).first().click();
+  await expect(page.getByRole("dialog").getByLabel("Map location")).toHaveValue("25.077200, 55.139300");
+  await page.keyboard.press("Escape");
+
+  // The mobile API carries the pin, and an order's page shows the laundry.
+  const vendors = await (await request.get("/api/vendors")).json();
+  expect(vendors).toContainEqual(expect.objectContaining({ latitude: 25.0772, longitude: 55.1393 }));
+  await page.goto("/orders");
+  await page.locator('a[href^="/orders/c"]').first().click();
+  const card = page.locator("section", { has: page.getByRole("heading", { name: "Laundry", exact: true }) });
+  await expect(card.getByRole("link", { name: "Open in maps" })).toHaveAttribute("href", /25\.0772,55\.1393/);
+});

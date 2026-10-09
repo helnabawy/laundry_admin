@@ -172,6 +172,8 @@ export function vendor(
     addressAr: string | null;
     city: string | null;
     area: string | null;
+    latitude: number | null;
+    longitude: number | null;
     codFee: Prisma.Decimal | number;
   },
 ) {
@@ -184,6 +186,8 @@ export function vendor(
     address: v.addressEn || v.addressAr ? tr(lang, v.addressEn ?? "", v.addressAr ?? "") : null,
     city: v.city,
     area: v.area,
+    latitude: v.latitude,
+    longitude: v.longitude,
     codFee: num(v.codFee),
   };
 }

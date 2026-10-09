@@ -1,7 +1,7 @@
 import "server-only";
 import type { Prisma } from "@/generated/prisma/client";
 import { db } from "@/server/db";
-import { vendorWhere } from "@/server/auth/scope";
+import { vendorWhere, type VendorScope } from "@/server/auth/scope";
 import type { Session } from "@/server/auth/session";
 import { BOARD_COLUMNS, type OrderKind, type OrderStatus } from "@/domain/order-workflow";
 import { invoiceTotals } from "@/domain/pricing";
@@ -107,7 +107,7 @@ export interface OrderFilters {
 export const PAGE_SIZE = 25;
 
 export function orderWhere(
-  scope: { vendorId?: string },
+  scope: VendorScope,
   f: Omit<OrderFilters, "page"> & {
     tierId?: string;
     driverId?: string;
@@ -174,7 +174,21 @@ export const detailInclude = {
   pickupDriver: { select: { id: true, fullName: true, phone: true } },
   deliveryDriver: { select: { id: true, fullName: true, phone: true } },
   customer: { select: { id: true, phone: true, fullName: true, _count: { select: { orders: true } } } },
-  vendor: { select: { id: true, nameEn: true, nameAr: true, codFee: true } },
+  vendor: {
+    select: {
+      id: true,
+      nameEn: true,
+      nameAr: true,
+      codFee: true,
+      phone: true,
+      addressEn: true,
+      addressAr: true,
+      city: true,
+      area: true,
+      latitude: true,
+      longitude: true,
+    },
+  },
 } satisfies Prisma.OrderInclude;
 
 export type OrderDetail = Prisma.OrderGetPayload<{ include: typeof detailInclude }>;
@@ -192,9 +206,10 @@ export async function staffNamesById(ids: string[]) {
   return new Map(rows.map((r) => [r.id, r.name]));
 }
 
-export async function vendorDrivers(vendorId: string) {
+/** Drivers staff can dispatch: every active driver, since drivers serve all laundries. */
+export async function activeDrivers() {
   const drivers = await db.mobileUser.findMany({
-    where: { vendorId, role: "driver", isActive: true },
+    where: { role: "driver", isActive: true },
     orderBy: { fullName: "asc" },
     select: {
       id: true,
@@ -218,10 +233,10 @@ export async function vendorDrivers(vendorId: string) {
   }));
 }
 
-export type DriverOption = Awaited<ReturnType<typeof vendorDrivers>>[number];
+export type DriverOption = Awaited<ReturnType<typeof activeDrivers>>[number];
 
 /** Deliveries per driver over the last `days` days. */
-export async function deliveredByDriver(scope: { vendorId?: string }, days: number) {
+export async function deliveredByDriver(scope: VendorScope, days: number) {
   const since = new Date(Date.now() - days * 86_400_000);
   const rows = await db.order.groupBy({
     by: ["deliveryDriverId"],

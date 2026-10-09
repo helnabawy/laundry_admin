@@ -16,6 +16,7 @@ import {
   type PaymentStatus,
 } from "@/domain/payments";
 import { round2, type PaymentMethod } from "@/domain/pricing";
+import { canAccessVendor, type LaundryMember } from "@/lib/permissions";
 import { CHANNEL, type PortalEvent } from "@/server/realtime/bus";
 import { queuePush, withPushOutbox } from "@/server/push";
 import {
@@ -409,9 +410,8 @@ export async function assertDispatchable(tx: Tx, order: Pick<OrderRow, "id" | "k
 
 // ---- Refunds ------------------------------------------------------------------------
 
-export interface StaffActor {
+export interface StaffActor extends LaundryMember {
   userId: string;
-  vendorId: string | null;
 }
 
 /** Full or partial refund of a completed payment, issued from the portal. */
@@ -422,7 +422,7 @@ export async function refundPayment(
   reason: string,
 ) {
   const found = await db.payment.findUnique({ where: { id: paymentId } });
-  if (!found || (staff.vendorId && found.vendorId !== staff.vendorId)) {
+  if (!found || !canAccessVendor(staff, found.vendorId)) {
     throw new DomainError("Payment not found", 404);
   }
 

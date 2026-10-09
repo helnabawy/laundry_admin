@@ -243,7 +243,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
   );
 }
 
-/** Super admin, "All laundries": the period's numbers side by side. */
+/** Looking at several laundries ("All laundries" / "All my laundries"): the period's numbers side by side. */
 function LaundryComparison({
   rows,
   locale,

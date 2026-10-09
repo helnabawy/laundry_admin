@@ -1,6 +1,7 @@
 import "server-only";
 import { db } from "@/server/db";
 import { pushCopy, vendorTopic, type PushLang } from "@/domain/push-copy";
+import { orderFcmMessage, orderPushData } from "@/domain/push-message";
 import type { Tx } from "@/server/orders/transition";
 
 /**
@@ -33,16 +34,24 @@ interface TokenMessage {
   data: Record<string, string>;
 }
 
+/** What happened to one message; `error` is FCM's error code. */
+export interface PushResult {
+  token: string;
+  error?: string;
+}
+
 interface PushDriver {
-  /** Returns the tokens FCM says are no longer valid. */
-  sendToTokens(messages: TokenMessage[]): Promise<string[]>;
+  /** Which driver this is — `log` when pushes are only printed. */
+  name: "firebase" | "log";
+  sendToTokens(messages: TokenMessage[]): Promise<PushResult[]>;
   sendToTopic(topic: string, data: Record<string, string>): Promise<void>;
 }
 
 const logDriver: PushDriver = {
+  name: "log",
   async sendToTokens(messages) {
     for (const m of messages) console.info(`[push] ${m.token.slice(0, 12)}… ${m.title} — ${m.body}`, m.data);
-    return [];
+    return messages.map((m) => ({ token: m.token }));
   },
   async sendToTopic(topic, data) {
     console.info(`[push] topic ${topic}`, data);
@@ -61,20 +70,11 @@ async function firebaseDriver(serviceAccountJson: string): Promise<PushDriver> {
   const app = getApps()[0] ?? initializeApp({ credential: cert(JSON.parse(serviceAccountJson)) });
   const messaging = getMessaging(app);
   return {
+    name: "firebase",
     async sendToTokens(messages) {
       if (!messages.length) return [];
-      const res = await messaging.sendEach(
-        messages.map((m) => ({
-          token: m.token,
-          notification: { title: m.title, body: m.body },
-          data: m.data,
-          android: { priority: "high" },
-          apns: { payload: { aps: { sound: "default" } } },
-        })),
-      );
-      return res.responses.flatMap((r, i) =>
-        !r.success && r.error && UNREGISTERED.has(r.error.code) ? [messages[i].token] : [],
-      );
+      const res = await messaging.sendEach(messages.map(orderFcmMessage));
+      return res.responses.map((r, i) => ({ token: messages[i].token, error: r.success ? undefined : r.error?.code }));
     },
     async sendToTopic(topic, data) {
       await messaging.send({
@@ -115,7 +115,9 @@ export async function withPushOutbox<T>(run: (begin: (tx: Tx) => void) => Promis
   const jobs: OrderPush[] = [];
   const result = await run((tx) => outboxes.set(tx, jobs));
   if (jobs.length) {
-    const sending = sendOrderPushes(jobs).finally(() => inFlight.delete(sending));
+    const sending: Promise<void> = sendOrderPushes(jobs)
+      .then(() => {})
+      .finally(() => inFlight.delete(sending));
     inFlight.add(sending);
   }
   return result;
@@ -136,33 +138,39 @@ export function queuePush(tx: Tx, push: OrderPush) {
 
 // ---- Sending ------------------------------------------------------------------
 
-export async function sendOrderPushes(jobs: OrderPush[]) {
+/**
+ * Sends each push to every device of its user and forgets tokens FCM rejects
+ * as unregistered. Returns what happened per device (empty when the users
+ * have none, or sending failed — which is logged, never thrown).
+ */
+export async function sendOrderPushes(jobs: OrderPush[]): Promise<PushResult[]> {
   try {
     const tokens = await db.deviceToken.findMany({
       where: { mobileUserId: { in: [...new Set(jobs.map((j) => j.mobileUserId))] } },
     });
-    if (!tokens.length) return;
+    if (!tokens.length) return [];
     const messages = jobs.flatMap((job) =>
       tokens
         .filter((t) => t.mobileUserId === job.mobileUserId)
         .map((t) => ({
           token: t.token,
           ...pushCopy((t.locale === "ar" ? "ar" : "en") as PushLang, job.kind, job.orderNumber),
-          data: {
-            type: "order",
-            kind: job.kind,
-            orderId: job.orderId,
-            orderNumber: String(job.orderNumber),
-            status: job.status,
-            vendorId: job.vendorId,
-          },
+          data: orderPushData(job),
         })),
     );
-    const dead = await (await driver()).sendToTokens(messages);
+    const results = await (await driver()).sendToTokens(messages);
+    const dead = results.flatMap((r) => (r.error && UNREGISTERED.has(r.error) ? [r.token] : []));
     if (dead.length) await db.deviceToken.deleteMany({ where: { token: { in: dead } } });
+    return results;
   } catch (error) {
     console.error("[push] order push failed", error);
+    return [];
   }
+}
+
+/** `firebase` when pushes really go out, `log` when they're only printed. */
+export async function pushDriverName() {
+  return (await driver()).name;
 }
 
 /** Tells open apps of this laundry that its catalogue, tiers or slots changed. */

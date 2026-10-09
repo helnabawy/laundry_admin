@@ -68,7 +68,8 @@
     "laundry": "Laundry",
     "allLaundries": "All laundries",
     "users": "Users",
-    "finance": "Finance"
+    "finance": "Finance",
+    "allMyLaundries": "All my laundries"
   },
   "auth": {
     "title": "Sign in",
@@ -175,7 +176,11 @@
     "tier": "Service level",
     "turnaround": "{hours}h turnaround",
     "stageOf": "Stage {current} of {total}",
-    "awaitingOnlinePayment": "Waiting for the online payment. Assign a driver once it's paid."
+    "awaitingOnlinePayment": "Waiting for the online payment. Assign a driver once it's paid.",
+    "editLaundry": "Edit",
+    "laundryNoAddress": "No address added yet",
+    "laundryNoPin": "No map pin yet",
+    "routeToCustomer": "Route to customer"
   },
   "actions": {
     "assignPickupDriver": "Assign pickup driver",
@@ -404,7 +409,12 @@
     "refundNotCaptured": "Only a completed payment can be refunded.",
     "refundTooSmall": "Enter an amount above zero.",
     "refundTooLarge": "That's more than what's left to refund on this payment.",
-    "refundDecimals": "Use at most 2 decimals (fils)."
+    "refundDecimals": "Use at most 2 decimals (fils).",
+    "assignment": {
+      "noneAllowed": "A super admin isn't assigned to laundries.",
+      "exactlyOne": "Pick exactly one laundry for an operator.",
+      "atLeastOne": "Pick at least one laundry for a laundry admin."
+    }
   },
   "dashboard": {
     "title": "Dashboard",
@@ -572,10 +582,13 @@
     "empty": "No staff yet",
     "created": "{name} can now sign in",
     "roleHelp": {
-      "SUPER_ADMIN": "Every laundry, reports, audit log",
-      "ADMIN": "Runs one laundry: services, drivers, staff, orders",
-      "USER": "Works orders: assign, receive, count, send out"
-    }
+      "SUPER_ADMIN": "Every laundry, staff, reports, audit log",
+      "ADMIN": "Runs the laundries you assign: services, drivers, operators, orders, money",
+      "USER": "Works one laundry's orders: assign, receive, count, send out"
+    },
+    "laundries": "Laundries",
+    "laundriesHint": "They see and manage only the laundries ticked here.",
+    "descriptionLaundry": "The operators of your laundries. You can add operators and move them between your laundries."
   },
   "reports": {
     "title": "Reports",
@@ -631,7 +644,6 @@
     "invoicePrefix": "Invoice number prefix",
     "orders": "Orders",
     "staff": "Staff",
-    "drivers": "Drivers",
     "active": "Accepting orders",
     "edit": "Edit laundry",
     "singleNote": "Only one laundry so far. Add another and a laundry switcher appears in the top bar; customers pick a laundry in the app.",
@@ -650,7 +662,27 @@
     "created": "{name} added.",
     "prefixTaken": "Another laundry already uses this invoice prefix.",
     "slugTaken": "Another laundry already uses this short ID.",
-    "customersSee": "Customers see the name, address, city and area when picking a laundry in the app."
+    "customersSee": "Customers see the name, address, city and area when picking a laundry in the app. The map pin helps drivers and staff find it.",
+    "location": "Map location",
+    "locationPlaceholder": "25.0772, 55.1393 or a Google Maps link",
+    "locationHint": "Paste coordinates or a Google Maps link, or use this device’s location while you’re at the laundry. Drivers and staff use this pin.",
+    "locationUnreadable": "No coordinates found. Short links (maps.app.goo.gl) don’t include them: open the link, then copy the address from the browser bar, or paste the coordinates.",
+    "locationHere": "Use my location",
+    "locationClear": "Clear location",
+    "locationOpen": "Open in Google Maps",
+    "locationMapTitle": "Map of the laundry’s location",
+    "locationDenied": "Location access is blocked. Allow it in the browser, or paste the coordinates.",
+    "locationFailed": "Couldn’t get this device’s location. Try again, or paste the coordinates.",
+    "locationUnsupported": "This browser can’t share its location. Paste the coordinates instead.",
+    "laundry": "Laundry",
+    "where": "Address",
+    "prefixShort": "Invoice prefix",
+    "codFeeShort": "COD fee",
+    "paused": "Not accepting orders",
+    "noAddress": "No address yet",
+    "noPin": "No map pin",
+    "empty": "No laundries yet",
+    "editNamed": "Edit {name}"
   },
   "audit": {
     "title": "Audit log",
@@ -679,7 +711,7 @@
   "users": {
     "title": "Users",
     "description": "Everyone who uses the mobile app, customers and drivers, in every laundry. They sign in with their mobile number.",
-    "descriptionLaundry": "Customers who have ordered from your laundry. They sign in to the mobile app with their mobile number.",
+    "descriptionLaundry": "Customers who have ordered from your laundries. They sign in to the mobile app with their mobile number.",
     "searchPlaceholder": "Name or mobile number",
     "status": "Status",
     "allStatuses": "All users",

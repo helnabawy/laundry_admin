@@ -235,14 +235,14 @@ export async function reportSummary(f: ReportFilters): Promise<SummaryTotals & {
   return { ...finish(total), byLaundry };
 }
 
-/** Dropdown options; tiers, drivers and categories follow the chosen laundry. */
+/** Dropdown options; tiers and categories follow the chosen laundry. Drivers serve every laundry. */
 export async function reportFilterOptions(vendorId?: string) {
   const scope = vendorId ? { vendorId } : {};
   const [vendors, tiers, drivers, categories] = await Promise.all([
     db.vendor.findMany({ orderBy: { createdAt: "asc" }, select: { id: true, nameEn: true, nameAr: true } }),
     db.serviceTier.findMany({ where: scope, orderBy: { sortOrder: "asc" }, select: { id: true, nameEn: true, nameAr: true } }),
     db.mobileUser.findMany({
-      where: { role: "driver", ...scope },
+      where: { role: "driver" },
       orderBy: { fullName: "asc" },
       select: { id: true, fullName: true, phone: true },
     }),

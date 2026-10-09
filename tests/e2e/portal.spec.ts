@@ -13,9 +13,9 @@ test("navigation follows the role", async ({ page }) => {
   await staffLogin(page, "admin@laundry.local");
   await expect(nav.getByRole("link", { name: "Services & prices" })).toBeVisible();
   await expect(nav.getByRole("link", { name: "Reports" })).toHaveCount(0);
-  await expect(nav.getByRole("link", { name: "Staff" })).toHaveCount(0);
-  await page.goto("/staff");
-  await expect(page).toHaveURL(/\/dashboard/);
+  // A laundry admin manages their laundries' operators (docs/ROLES.md).
+  await expect(nav.getByRole("link", { name: "Staff" })).toBeVisible();
+  await expect(nav.getByRole("link", { name: "Laundries" })).toHaveCount(0);
 
   await staffLogin(page, "super@laundry.local");
   await expect(nav.getByRole("link", { name: "Reports" })).toBeVisible();

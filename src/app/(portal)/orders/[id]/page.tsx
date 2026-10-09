@@ -9,11 +9,14 @@ import {
   Crown,
   MapPin,
   Phone,
+  Route,
+  Store,
   ShieldCheck,
   Star,
 } from "lucide-react";
 import { requirePage } from "@/server/auth/session";
-import { orderDetail, staffNamesById, vendorDrivers } from "@/server/queries/orders";
+import { assignedVendorIds } from "@/server/auth/scope";
+import { orderDetail, staffNamesById, activeDrivers } from "@/server/queries/orders";
 import { can } from "@/lib/permissions";
 import { dateTime, money, pick } from "@/lib/format";
 import { SlotWindow } from "@/components/orders/slot-window";
@@ -27,6 +30,7 @@ import { OrderPayments } from "@/components/finance/order-payments";
 import { orderPayments } from "@/server/queries/finance";
 import { StatusStamp } from "@/components/ui/status-stamp";
 import { cn } from "@/lib/cn";
+import { mapsUrl } from "@/domain/geo";
 
 export async function generateMetadata({ params }: PageProps<"/orders/[id]">) {
   const t = await getTranslations("orders");
@@ -44,7 +48,7 @@ export default async function OrderPage({ params }: PageProps<"/orders/[id]">) {
   const t = await getTranslations();
   const locale = await getLocale();
   const canOperate = can(session.role, "orders.operate");
-  const drivers = canOperate ? await vendorDrivers(order.vendorId) : [];
+  const drivers = canOperate ? await activeDrivers() : [];
   const payments = order.invoice ? await orderPayments(order.id) : [];
   const staffNames = await staffNamesById(
     order.events.filter((e) => e.actorType === "staff" && e.actorId).map((e) => e.actorId!),
@@ -81,9 +85,19 @@ export default async function OrderPage({ params }: PageProps<"/orders/[id]">) {
     return t("timeline.system");
   };
 
-  const mapHref =
+  const customerPin =
     address.latitude && address.longitude
-      ? `https://www.google.com/maps/search/?api=1&query=${address.latitude},${address.longitude}`
+      ? { latitude: Number(address.latitude), longitude: Number(address.longitude) }
+      : null;
+  const mapHref = customerPin ? mapsUrl(customerPin) : null;
+  const vendor = order.vendor;
+  const laundryPin =
+    vendor.latitude != null && vendor.longitude != null ? { latitude: vendor.latitude, longitude: vendor.longitude } : null;
+  const laundryAddress = vendor.addressEn || vendor.addressAr ? pick(locale, vendor.addressEn ?? "", vendor.addressAr ?? "") : null;
+  // Driving directions between the two pins, for planning a pickup or delivery.
+  const routeHref =
+    laundryPin && customerPin
+      ? `https://www.google.com/maps/dir/?api=1&origin=${laundryPin.latitude},${laundryPin.longitude}&destination=${customerPin.latitude},${customerPin.longitude}`
       : null;
 
   return (
@@ -118,7 +132,7 @@ export default async function OrderPage({ params }: PageProps<"/orders/[id]">) {
               </h1>
               <p className="mt-2 text-sm text-ink-2">
                 {t("orders.placedOn", { date: dateTime(locale, order.createdAt) })}
-                {session.vendorId ? null : <> · {pick(locale, order.vendor.nameEn, order.vendor.nameAr)}</>}
+                {assignedVendorIds(session)?.length === 1 ? null : <> · {pick(locale, order.vendor.nameEn, order.vendor.nameAr)}</>}
               </p>
             </div>
             {canOperate ? (
@@ -329,6 +343,71 @@ export default async function OrderPage({ params }: PageProps<"/orders/[id]">) {
                   ) : null}
                 </p>
               </div>
+            </div>
+          </Sheet>
+
+          <Sheet>
+            <SheetHeader
+              title={t("orders.laundry")}
+              actions={
+                can(session.role, "vendors.manage") ? (
+                  <Link href="/vendors" className="text-[13px] font-medium text-ink-2 underline decoration-rule-strong underline-offset-2 hover:text-ink hover:decoration-ink">
+                    {t("orders.editLaundry")}
+                  </Link>
+                ) : null
+              }
+            />
+            <div className="flex flex-col gap-3 px-4 py-4 text-sm sm:px-5">
+              <div className="flex gap-2">
+                <Store className="mt-0.5 size-4 shrink-0 text-ink-3" aria-hidden />
+                <div className="min-w-0">
+                  <p className="font-medium">{pick(locale, vendor.nameEn, vendor.nameAr)}</p>
+                  {vendor.phone ? (
+                    <a href={`tel:${vendor.phone}`} className="inline-flex items-center gap-1.5 text-ink-2 hover:text-ink" dir="ltr">
+                      <Phone className="size-3.5" aria-hidden />
+                      {vendor.phone}
+                    </a>
+                  ) : null}
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <MapPin className="mt-0.5 size-4 shrink-0 text-ink-3" aria-hidden />
+                <p className="text-ink-2">
+                  {laundryAddress || vendor.area || vendor.city ? (
+                    <>
+                      {laundryAddress}
+                      {laundryAddress && (vendor.area || vendor.city) ? <br /> : null}
+                      {[vendor.area, vendor.city].filter(Boolean).join("، ")}
+                    </>
+                  ) : (
+                    <span className="text-ink-3">{t("orders.laundryNoAddress")}</span>
+                  )}
+                  {laundryPin ? (
+                    <>
+                      <br />
+                      <a href={mapsUrl(laundryPin)} target="_blank" rel="noreferrer" className="font-medium text-ink underline decoration-rule-strong hover:decoration-ink">
+                        {t("orders.openMap")}
+                      </a>
+                    </>
+                  ) : (
+                    <>
+                      <br />
+                      <span className="text-[13px] text-ink-3">{t("orders.laundryNoPin")}</span>
+                    </>
+                  )}
+                </p>
+              </div>
+              {routeHref ? (
+                <a
+                  href={routeHref}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex w-fit items-center gap-1.5 rounded-control border border-rule-strong px-3 py-1.5 text-[13px] font-medium text-ink hover:bg-card-recessed"
+                >
+                  <Route className="size-3.5" aria-hidden />
+                  {t("orders.routeToCustomer")}
+                </a>
+              ) : null}
             </div>
           </Sheet>
 

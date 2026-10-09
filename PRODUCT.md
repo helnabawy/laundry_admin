@@ -12,9 +12,9 @@ Responsive web app. Desktop and tablet are the primary targets, and it must also
 
 Staff of the laundry, working in three portal roles (confirmed):
 
-- **Super admin**: the platform operator. Sees every laundry, manages staff accounts (the only role that can), runs reports across all requests, exports them, reads the audit log and manages laundries (vendors).
-- **Admin**: runs one laundry. Manages the service catalogue (categories, sub-services, priced products, service tiers and time slots), plus drivers and orders. Reads the dashboard.
-- **User (laundry operator)**: works orders on the facility floor. Assigns drivers, confirms the driver handed items over, counts and prices items, records the condition report, marks cleaning done and dispatches for delivery.
+- **Super admin**: the platform operator. Sees every laundry, manages all staff accounts and assigns them to laundries, runs reports across all requests, exports them, reads the audit log and manages laundries (vendors).
+- **Laundry admin**: runs the laundries a super admin assigned them (one or more), switching between them or viewing "All my laundries". Manages the service catalogue (categories, sub-services, priced products, service tiers and time slots), drivers, app users, orders, money, and the operators of their laundries. Reads the dashboard.
+- **Laundry operator**: works one laundry's orders on the facility floor. Assigns drivers, confirms the driver handed items over, counts and prices items, records the condition report, marks cleaning done and dispatches for delivery.
 
 Situations:
 - Managers and the super admin sit at an office desktop.

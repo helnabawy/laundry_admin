@@ -2,8 +2,8 @@ import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
 import { ChevronLeft, ChevronRight, Columns3, List, SearchX } from "lucide-react";
 import { requirePage } from "@/server/auth/session";
-import { listActiveVendors } from "@/server/auth/scope";
-import { boardTickets, listOrders, vendorDrivers, type DriverOption } from "@/server/queries/orders";
+import { spansLaundries } from "@/server/auth/scope";
+import { activeDrivers, boardTickets, listOrders } from "@/server/queries/orders";
 import { can } from "@/lib/permissions";
 import { BOARD_COLUMNS, ORDER_STATUSES, type OrderKind, type OrderStatus } from "@/domain/order-workflow";
 import { Board, type StageNames } from "@/components/orders/board";
@@ -57,17 +57,7 @@ export default async function OrdersPage({ searchParams }: PageProps<"/orders">)
 
   if (view === "board") {
     const tickets = await boardTickets(session);
-    const vendorIds = session.vendorId
-      ? [session.vendorId]
-      : (await listActiveVendors()).map((v) => v.id);
-    const driversByVendor: Record<string, DriverOption[]> = {};
-    if (canOperate) {
-      await Promise.all(
-        vendorIds.map(async (id) => {
-          driversByVendor[id] = await vendorDrivers(id);
-        }),
-      );
-    }
+    const drivers = canOperate ? await activeDrivers() : [];
     // Stage names in both languages: staff work in both.
     const [en, ar] = await Promise.all([
       getTranslations({ locale: "en", namespace: "stage" }),
@@ -81,7 +71,7 @@ export default async function OrdersPage({ searchParams }: PageProps<"/orders">)
         {header}
         <Board
           tickets={tickets}
-          driversByVendor={driversByVendor}
+          drivers={drivers}
           canCancel={canCancel}
           canOperate={canOperate}
           stageNames={stageNames}
@@ -140,7 +130,7 @@ export default async function OrdersPage({ searchParams }: PageProps<"/orders">)
         {result.rows.length === 0 ? (
           <EmptyState icon={SearchX} title={t("orders.noResults")} body={t("orders.noResultsBody")} />
         ) : (
-          <OrdersTable rows={result.rows} showVendor={!session.vendorId} />
+          <OrdersTable rows={result.rows} showVendor={await spansLaundries(session)} />
         )}
       </Sheet>
 

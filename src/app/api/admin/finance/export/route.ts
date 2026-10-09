@@ -10,7 +10,7 @@ import {
   parseLedgerFilters,
   paymentLedgerExport,
 } from "@/server/queries/finance";
-import { vendorWhere } from "@/server/auth/scope";
+import { switcherVendorId } from "@/server/auth/scope";
 import { audit } from "@/server/orders/transition";
 import { db } from "@/server/db";
 import { TIME_ZONE } from "@/lib/format";
@@ -99,7 +99,7 @@ export async function GET(req: Request) {
 
   await audit(db, {
     actorId: session.userId,
-    vendorId: (await vendorWhere(session)).vendorId ?? null,
+    vendorId: await switcherVendorId(session),
     action: "finance.export",
     entity: "Finance",
     data: { dataset, format, rows: data.length, from: range.from, to: range.to },

@@ -6,11 +6,11 @@ import { hash, verify } from "@node-rs/argon2";
 import { z } from "zod";
 import { db } from "@/server/db";
 import { requireCapability, requireSession } from "@/server/auth/session";
-import { assertVendorAccess, vendorForWrite } from "@/server/auth/scope";
+import { assertVendorAccess, assignedVendorIds, vendorForWrite } from "@/server/auth/scope";
 import { audit } from "@/server/orders/transition";
 import { copyCatalogue } from "@/server/vendors/copy";
 import { publishCatalogueChanged } from "@/server/push";
-import { manageableRoles, type StaffRole } from "@/lib/permissions";
+import { assignmentProblem, canAccessVendor, manageableRoles, type StaffRole } from "@/lib/permissions";
 import { ActionError, run } from "./result";
 
 // ---- Drivers ----------------------------------------------------------------
@@ -59,22 +59,34 @@ const staffSchema = z.object({
   name: z.string().trim().min(2).max(120),
   email: z.string().trim().toLowerCase().email(),
   role: z.enum(["SUPER_ADMIN", "ADMIN", "USER"]),
-  vendorId: z.string().nullable(),
+  /** Assigned laundries: none for SUPER_ADMIN, one for USER, one or more for ADMIN. */
+  vendorIds: z.array(z.string().min(1)).max(500),
   isActive: z.boolean(),
   password: z.string().max(200).optional(),
 });
 
+/**
+ * Creates or edits a staff account and its laundries. A super admin manages
+ * everyone; a laundry admin manages the operators of their own laundries and
+ * may only assign them to one of those.
+ */
 export async function saveStaffAction(id: string | null, input: z.input<typeof staffSchema>) {
   return run(async () => {
     const session = await requireCapability("staff.manage");
     const t = await getTranslations("errors");
     const v = staffSchema.parse(input);
-    if (!manageableRoles(session.role).includes(v.role as StaffRole)) throw new ActionError(t("forbidden"));
+    const roles = manageableRoles(session.role);
+    if (!roles.includes(v.role as StaffRole)) throw new ActionError(t("forbidden"));
     if (v.password && v.password.length < 10) throw new ActionError(t("invalid"));
     if (!id && !v.password) throw new ActionError(t("invalid"));
 
-    // Admins manage their own laundry; platform admins have no laundry.
-    const vendorId = v.role === "SUPER_ADMIN" ? null : session.vendorId ?? v.vendorId ?? (await vendorForWrite(session));
+    const vendorIds = [...new Set(v.vendorIds)];
+    const problem = assignmentProblem(v.role, vendorIds);
+    if (problem) throw new ActionError(t(`assignment.${problem}`));
+    if (!vendorIds.every((vid) => canAccessVendor(session, vid))) throw new ActionError(t("forbidden"));
+    const known = await db.vendor.count({ where: { id: { in: vendorIds } } });
+    if (known !== vendorIds.length) throw new ActionError(t("laundryNotFound"));
+
     const clash = await db.staffUser.findUnique({ where: { email: v.email } });
     if (clash && clash.id !== id) throw new ActionError(t("emailTaken"));
 
@@ -82,26 +94,31 @@ export async function saveStaffAction(id: string | null, input: z.input<typeof s
       name: v.name,
       email: v.email,
       role: v.role,
-      vendorId,
       isActive: v.isActive,
       ...(v.password ? { passwordHash: await hash(v.password) } : {}),
     };
+    const links = vendorIds.map((vendorId) => ({ vendorId }));
+    let staffId = id;
     if (id) {
-      const target = await db.staffUser.findUniqueOrThrow({ where: { id } });
-      if (session.vendorId && target.vendorId !== session.vendorId) throw new ActionError(t("forbidden"));
-      if (!manageableRoles(session.role).includes(target.role)) throw new ActionError(t("forbidden"));
+      const target = await db.staffUser.findUniqueOrThrow({ where: { id }, include: { vendors: true } });
+      // Only someone who may see every laundry the target works in may edit them.
+      if (!target.vendors.every((l) => canAccessVendor(session, l.vendorId))) throw new ActionError(t("forbidden"));
+      if (!roles.includes(target.role)) throw new ActionError(t("forbidden"));
       if (id === session.userId && (!v.isActive || v.role !== session.role)) throw new ActionError(t("cannotDeactivateSelf"));
-      await db.staffUser.update({ where: { id }, data });
+      await db.staffUser.update({ where: { id }, data: { ...data, vendors: { deleteMany: {}, create: links } } });
     } else {
-      await db.staffUser.create({ data: { ...data, passwordHash: data.passwordHash! } });
+      const created = await db.staffUser.create({
+        data: { ...data, passwordHash: data.passwordHash!, vendors: { create: links } },
+      });
+      staffId = created.id;
     }
     await audit(db, {
       actorId: session.userId,
-      vendorId,
+      vendorId: vendorIds.length === 1 ? vendorIds[0] : null,
       action: id ? "staff.update" : "staff.create",
       entity: "StaffUser",
-      entityId: id,
-      data: { name: v.name, email: v.email, role: v.role, isActive: v.isActive, passwordChanged: !!v.password },
+      entityId: staffId,
+      data: { name: v.name, email: v.email, role: v.role, vendorIds, isActive: v.isActive, passwordChanged: !!v.password },
     });
     revalidatePath("/staff");
   });
@@ -126,7 +143,7 @@ export async function changePasswordAction(input: { current: string; next: strin
     const user = await db.staffUser.findUniqueOrThrow({ where: { id: session.userId } });
     if (!(await verify(user.passwordHash, input.current).catch(() => false))) throw new ActionError(t("profile.wrongPassword"));
     await db.staffUser.update({ where: { id: user.id }, data: { passwordHash: await hash(input.next) } });
-    await audit(db, { actorId: user.id, vendorId: user.vendorId, action: "staff.passwordChange", entity: "StaffUser", entityId: user.id });
+    await audit(db, { actorId: user.id, vendorId: session.vendorIds.length === 1 ? session.vendorIds[0] : null, action: "staff.passwordChange", entity: "StaffUser", entityId: user.id });
   });
 }
 
@@ -134,7 +151,7 @@ export async function changePasswordAction(input: { current: string; next: strin
 
 const optionalText = z.string().trim().max(200).optional();
 
-const vendorSchema = z.object({
+const vendorFields = z.object({
   nameEn: z.string().trim().min(1).max(120),
   nameAr: z.string().trim().min(1).max(120),
   phone: z.string().trim().max(40).optional(),
@@ -142,19 +159,27 @@ const vendorSchema = z.object({
   addressAr: optionalText,
   city: z.string().trim().max(80).optional(),
   area: z.string().trim().max(80).optional(),
+  latitude: z.number().min(-90).max(90).nullable().default(null),
+  longitude: z.number().min(-180).max(180).nullable().default(null),
   codFee: z.coerce.number().min(0).max(1000),
   invoicePrefix: z.string().trim().regex(/^[A-Z0-9]{1,8}$/),
   isActive: z.boolean(),
 });
 
-const newVendorSchema = vendorSchema.extend({
+/** A map pin needs both coordinates, or neither. */
+const pinComplete = (v: { latitude: number | null; longitude: number | null }) =>
+  (v.latitude === null) === (v.longitude === null);
+
+const vendorSchema = vendorFields.refine(pinComplete, { path: ["latitude"] });
+
+const newVendorSchema = vendorFields.extend({
   slug: z.string().trim().toLowerCase().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/).max(40),
   /** Laundry whose catalogue, tiers and time windows the new one starts with. */
   copyFromId: z.string().nullable(),
-});
+}).refine(pinComplete, { path: ["latitude"] });
 
 /** Empty optional strings are stored as null. */
-function vendorData(v: z.output<typeof vendorSchema>) {
+function vendorData(v: z.output<typeof vendorFields>) {
   return {
     ...v,
     phone: v.phone || null,
@@ -220,17 +245,18 @@ export async function setCustomerActiveAction(id: string, isActive: boolean) {
   return run(async () => {
     const session = await requireCapability("customers.manage");
     const t = await getTranslations("errors");
-    // Admins: customers of their laundry. Super admin: any app user.
+    // Laundry staff: customers of their laundries. Super admin: any app user.
+    const vendorIds = assignedVendorIds(session);
     const customer = await db.mobileUser.findFirst({
-      where: session.vendorId
-        ? { id, role: "customer", orders: { some: { vendorId: session.vendorId } } }
+      where: vendorIds
+        ? { id, role: "customer", orders: { some: { vendorId: { in: vendorIds } } } }
         : { id },
     });
     if (!customer) throw new ActionError(t("forbidden"));
     await db.mobileUser.update({ where: { id }, data: { isActive } });
     await audit(db, {
       actorId: session.userId,
-      vendorId: session.vendorId,
+      vendorId: vendorIds?.length === 1 ? vendorIds[0] : null,
       action: isActive ? "customer.unblock" : "customer.block",
       entity: "MobileUser",
       entityId: id,

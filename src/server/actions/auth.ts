@@ -34,6 +34,8 @@ export async function login(_prev: LoginState, form: FormData): Promise<LoginSta
 
   await db.staffUser.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
   await startSession(user.id);
+  // Every sign-in starts on all of the person's laundries.
+  (await cookies()).delete(VENDOR_COOKIE);
   (await cookies()).set(LOCALE_COOKIE, user.locale, { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax" });
 
   const next = String(form.get("next") ?? "");
@@ -54,10 +56,16 @@ export async function setLocale(locale: string) {
   if (session) await db.staffUser.update({ where: { id: session.userId }, data: { locale } });
 }
 
-/** Super admin's laundry switcher. */
+/**
+ * The laundry switcher (super admin, and a laundry admin with several
+ * laundries). Only a laundry the person may see is stored; anything else
+ * means "all". `getScope` re-checks the cookie on every request anyway.
+ */
 export async function setVendorFilter(vendorId: string) {
   const session = await getSession();
-  if (!session || session.role !== "SUPER_ADMIN") return;
-  const value = vendorId && (await isActiveVendor(vendorId)) ? vendorId : "all";
+  if (!session) return;
+  const allowed =
+    session.role === "SUPER_ADMIN" ? await isActiveVendor(vendorId) : session.vendorIds.includes(vendorId);
+  const value = vendorId && allowed ? vendorId : "all";
   (await cookies()).set(VENDOR_COOKIE, value, { path: "/", sameSite: "lax" });
 }

@@ -214,15 +214,17 @@ async function seedBase() {
 
   // Portal accounts.
   const passwordHash = await hash(DEV_PASSWORD);
+  // Super admin: no laundries (platform-wide). Laundry admin: one or more.
+  // Operator: exactly one. Re-seeding leaves existing accounts as they are.
   const staff = [
-    { email: "super@laundry.local", name: "Platform Admin", role: "SUPER_ADMIN" as const, vendorId: null },
-    { email: "admin@laundry.local", name: "Laundry Manager", role: "ADMIN" as const, vendorId: vendor.id },
-    { email: "operator@laundry.local", name: "Facility Operator", role: "USER" as const, vendorId: vendor.id },
+    { email: "super@laundry.local", name: "Platform Admin", role: "SUPER_ADMIN" as const, vendorIds: [] },
+    { email: "admin@laundry.local", name: "Laundry Manager", role: "ADMIN" as const, vendorIds: [vendor.id] },
+    { email: "operator@laundry.local", name: "Facility Operator", role: "USER" as const, vendorIds: [vendor.id] },
   ];
-  for (const s of staff) {
+  for (const { vendorIds, ...s } of staff) {
     await db.staffUser.upsert({
       where: { email: s.email },
-      create: { ...s, passwordHash },
+      create: { ...s, passwordHash, vendors: { create: vendorIds.map((vendorId) => ({ vendorId })) } },
       update: {},
     });
   }

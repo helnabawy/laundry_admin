@@ -28,8 +28,8 @@ async function main() {
   const [action, orderId, arg, arg2] = process.argv.slice(2);
   if (!action || !orderId) throw new Error("usage: staff <action> <orderId> [args]");
   const email = process.env.STAFF_EMAIL ?? "operator@laundry.local";
-  const user = await db.staffUser.findUniqueOrThrow({ where: { email } });
-  const staff = { userId: user.id, vendorId: user.vendorId };
+  const user = await db.staffUser.findUniqueOrThrow({ where: { email }, include: { vendors: true } });
+  const staff = { userId: user.id, role: user.role, vendorIds: user.vendors.map((v) => v.vendorId) };
 
   const order = await (() => {
     switch (action) {

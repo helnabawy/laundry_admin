@@ -2,6 +2,7 @@ import "server-only";
 import { Prisma } from "@/generated/prisma/client";
 import { db } from "@/server/db";
 import type { Session } from "@/server/auth/session";
+import { assignedVendorIds } from "@/server/auth/scope";
 import { ticketInclude, toTicket } from "./orders";
 
 /**
@@ -40,17 +41,16 @@ export interface CustomerRow {
 }
 
 /**
- * Deliberately not `vendorWhere`: the super admin sees all app users even
- * while the laundry switcher narrows other pages.
+ * Deliberately not `vendorWhere`: app users don't follow the laundry
+ * switcher. The super admin sees all of them; laundry staff see the customers
+ * who ordered from any of their laundries. null = everyone.
  */
-function scopeOf(session: Session): { vendorId?: string } {
-  return session.vendorId ? { vendorId: session.vendorId } : {};
-}
+const scopeOf = assignedVendorIds;
 
-function customerWhere(scope: { vendorId?: string }, f: CustomerFilters): Prisma.MobileUserWhereInput {
+function customerWhere(vendorIds: string[] | null, f: CustomerFilters): Prisma.MobileUserWhereInput {
   const and: Prisma.MobileUserWhereInput[] = [];
-  if (scope.vendorId) {
-    and.push({ role: "customer", orders: { some: { vendorId: scope.vendorId } } });
+  if (vendorIds) {
+    and.push({ role: "customer", orders: { some: { vendorId: { in: vendorIds } } } });
   } else if (f.role) {
     and.push({ role: f.role });
   }
@@ -70,9 +70,9 @@ function customerWhere(scope: { vendorId?: string }, f: CustomerFilters): Prisma
 }
 
 /** Paid invoice totals per customer, in the viewer's scope. */
-async function paidTotals(ids: string[], vendorId?: string): Promise<Map<string, number>> {
+async function paidTotals(ids: string[], vendorIds: string[] | null): Promise<Map<string, number>> {
   if (ids.length === 0) return new Map();
-  const vendorSql = vendorId ? Prisma.sql`AND o."vendorId" = ${vendorId}` : Prisma.empty;
+  const vendorSql = vendorIds ? Prisma.sql`AND o."vendorId" = ANY(${vendorIds})` : Prisma.empty;
   const rows = await db.$queryRaw<{ customerId: string; total: number }[]>`
     SELECT t."customerId", SUM(t.total)::float AS total FROM (
       SELECT o."customerId", SUM(it.quantity * it."unitPrice") + i."vipSurcharge" + i."codFee" AS total
@@ -89,7 +89,7 @@ export async function listCustomers(session: Session, filters: CustomerFilters) 
   const scope = scopeOf(session);
   const where = customerWhere(scope, filters);
   const page = Math.max(1, filters.page ?? 1);
-  const orderScope = scope.vendorId ? { vendorId: scope.vendorId } : {};
+  const orderScope = scope ? { vendorId: { in: scope } } : {};
   const [rows, total] = await Promise.all([
     db.mobileUser.findMany({
       where,
@@ -104,7 +104,7 @@ export async function listCustomers(session: Session, filters: CustomerFilters) 
     }),
     db.mobileUser.count({ where }),
   ]);
-  const paid = await paidTotals(rows.map((r) => r.id), scope.vendorId);
+  const paid = await paidTotals(rows.map((r) => r.id), scope);
   const list: CustomerRow[] = rows.map((r) => ({
     id: r.id,
     fullName: r.fullName,
@@ -130,7 +130,7 @@ export async function customerDetail(session: Session, id: string) {
     },
   });
   if (!customer) return null;
-  const orderScope = scope.vendorId ? { vendorId: scope.vendorId } : {};
+  const orderScope = scope ? { vendorId: { in: scope } } : {};
   // A customer's own orders; a driver's collections and deliveries.
   const orderWhere =
     customer.role === "driver"
@@ -139,7 +139,7 @@ export async function customerDetail(session: Session, id: string) {
   const [orders, orderCount, paid] = await Promise.all([
     db.order.findMany({ where: orderWhere, include: ticketInclude, orderBy: { createdAt: "desc" }, take: 20 }),
     db.order.count({ where: orderWhere }),
-    customer.role === "driver" ? Promise.resolve(new Map<string, number>()) : paidTotals([id], scope.vendorId),
+    customer.role === "driver" ? Promise.resolve(new Map<string, number>()) : paidTotals([id], scope),
   ]);
   return {
     customer,

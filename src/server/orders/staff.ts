@@ -2,6 +2,7 @@ import "server-only";
 import { z } from "zod";
 import { db } from "@/server/db";
 import { invoiceTotals, round2 } from "@/domain/pricing";
+import { canAccessVendor, type LaundryMember } from "@/lib/permissions";
 import { assertDispatchable } from "@/server/payments/service";
 import {
   audit,
@@ -16,25 +17,25 @@ import {
  * Each function is one guarded transition (see src/domain/order-workflow.ts).
  */
 
-interface StaffActor {
+/** A staff member acting on orders: who they are and which laundries they may touch. */
+interface StaffActor extends LaundryMember {
   userId: string;
-  /** null = super admin (any vendor). */
-  vendorId: string | null;
 }
 
 const actorRef = (s: StaffActor): ActorRef => ({ type: "staff", id: s.userId });
 
 function vendorGuard(staff: StaffActor) {
   return (order: { vendorId: string }) => {
-    if (staff.vendorId && order.vendorId !== staff.vendorId) {
+    if (!canAccessVendor(staff, order.vendorId)) {
       throw new DomainError("Order not found", 404);
     }
   };
 }
 
-async function requireDriver(tx: Tx, vendorId: string, driverId: string) {
+/** Any active driver can work any laundry's orders, whatever laundry they were created under. */
+async function requireDriver(tx: Tx, driverId: string) {
   const driver = await tx.mobileUser.findFirst({
-    where: { id: driverId, vendorId, role: "driver", isActive: true },
+    where: { id: driverId, role: "driver", isActive: true },
   });
   if (!driver) throw new DomainError("Driver not found", 404);
   return driver;
@@ -58,7 +59,7 @@ export async function assignPickupDriver(
     guard: vendorGuard(staff),
     apply: async (tx, o) => {
       await assertDispatchable(tx, o);
-      await requireDriver(tx, o.vendorId, driverId);
+      await requireDriver(tx, driverId);
       return { pickupDriverId: driverId };
     },
   });
@@ -256,8 +257,8 @@ async function dispatchDelivery(
     transition,
     actor: actorRef(staff),
     guard: vendorGuard(staff),
-    apply: async (tx, o) => {
-      await requireDriver(tx, o.vendorId, deliveryDriverId);
+    apply: async (tx) => {
+      await requireDriver(tx, deliveryDriverId);
       return { deliveryDriverId };
     },
   });
