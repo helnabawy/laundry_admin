@@ -347,12 +347,15 @@
 /*
  * Scroll containers are positioning contexts, so absolutely positioned
  * descendants (screen-reader-only labels) stay inside the clip instead of
- * widening the page.
+ * widening the page. In the base layer, so a positioning utility on the
+ * same element (a dialog's `fixed`) still wins.
  */
-.overflow-x-auto,
-.overflow-y-auto,
-.overflow-auto {
-  position: relative;
+@layer base {
+  .overflow-x-auto,
+  .overflow-y-auto,
+  .overflow-auto {
+    position: relative;
+  }
 }
 
 /*

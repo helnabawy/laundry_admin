@@ -14,6 +14,7 @@
  */
 import "dotenv/config";
 import { db } from "@/server/db";
+import { flushPushes } from "@/server/push";
 import {
   assignPickupDriver,
   cancelOrder,
@@ -61,6 +62,7 @@ main()
     process.exitCode = 1;
   })
   .finally(async () => {
+    await flushPushes();
     await db.$disconnect();
     // The realtime bus may hold a LISTEN connection open.
     setTimeout(() => process.exit(), 50).unref();

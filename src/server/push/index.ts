@@ -105,6 +105,7 @@ function driver(): Promise<PushDriver> {
 // ---- Collecting pushes inside a transaction -----------------------------------
 
 const outboxes = new WeakMap<object, OrderPush[]>();
+const inFlight = new Set<Promise<void>>();
 
 /**
  * Runs `fn` with an outbox attached to its transaction, then sends whatever
@@ -113,8 +114,19 @@ const outboxes = new WeakMap<object, OrderPush[]>();
 export async function withPushOutbox<T>(run: (begin: (tx: Tx) => void) => Promise<T>): Promise<T> {
   const jobs: OrderPush[] = [];
   const result = await run((tx) => outboxes.set(tx, jobs));
-  if (jobs.length) void sendOrderPushes(jobs);
+  if (jobs.length) {
+    const sending = sendOrderPushes(jobs).finally(() => inFlight.delete(sending));
+    inFlight.add(sending);
+  }
   return result;
+}
+
+/**
+ * Waits for pushes still being sent. A long-running server never needs this;
+ * a short-lived script (`pnpm staff`) calls it before exiting.
+ */
+export async function flushPushes() {
+  await Promise.all(inFlight);
 }
 
 /** Queues an order push on the transaction's outbox (no-op without one). */
